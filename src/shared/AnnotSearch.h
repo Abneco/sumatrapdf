@@ -41,3 +41,4 @@ bool AnnotMatchesFields(Str author, Str contents, AnnotationType, const AnnotMat
 bool AnnotMatches(Annotation*, const AnnotMatchOpts&);
 void AnnotSearchContentWords(const AnnotMatchOpts&, StrVec& wordsOut);
 void AnnotSearchAddContentWord(AnnotMatchOpts&, Str word);
+void SetAnnotFilter(AnnotMatchOpts& filter, StrVec& filterWords, Str text);

@@ -140,23 +140,6 @@ static void LoadAnnotations(AnnotFilterToolbar* f) {
     EngineMupdfGetLoadedAnnotations(engine, f->annotations);
 }
 
-// Reparse the filter box. Bad syntax (a typo in a ":" condition) would match
-// nothing, which reads as "the filter is broken"; treat it as plain text
-// instead, the way it behaved before conditions existed.
-static void SetFilter(AnnotFilterToolbar* f, Str text) {
-    f->filter.Reset();
-    f->filterWords.Reset();
-    if (!ParseAnnotSearch(text, f->filter)) {
-        f->filter.Reset();
-        StrVec words;
-        SplitFilterToWords(text, words);
-        for (Str w : words) {
-            AnnotSearchAddContentWord(f->filter, w);
-        }
-    }
-    AnnotSearchContentWords(f->filter, f->filterWords);
-}
-
 static Annotation* VisibleAnnotAt(AnnotFilterToolbar* f, int idx) {
     if (!f || !VecIsValidIndex(f->visibleAnnots, idx)) {
         return nullptr;
@@ -549,7 +532,7 @@ static void OnFilterTextChanged(AnnotFilterToolbar* f) {
     Annotation* keep = tab ? tab->selectedAnnotation : nullptr;
     Str text = FromGpui(gp::InputValue(f->edit));
     str::ReplaceWithCopy(&f->filterText, text);
-    SetFilter(f, f->filterText);
+    SetAnnotFilter(f->filter, f->filterWords, f->filterText);
     LoadAnnotations(f);
     RebuildList(f);
     AppShellInvalidate(f->win);
@@ -842,7 +825,7 @@ void ApplyAnnotFilterText(MainWindow* win, Str text) {
         return;
     }
     str::ReplaceWithCopy(&f->filterText, text);
-    SetFilter(f, text);
+    SetAnnotFilter(f->filter, f->filterWords, text);
     LoadAnnotations(f);
     RebuildList(f);
     if (f->edit) {

@@ -64,7 +64,7 @@ static Str ButtonLabel(const SelectionToolbarButton& b) {
 }
 
 // selection handlers that asked for a button with SelectToolbarNameOrSvg
-static void AppendSelectionHandlerButtons(SelectionToolbar* tb, const AppCommandCtx& ctx) {
+void AppendSelectionHandlerButtons(Vec<SelectionToolbarButton>& buttons, const AppCommandCtx& ctx) {
     Vec<CustomCommand*> cmds;
     GetCommandsWithOrigId(cmds, CmdSelectionHandler);
     for (CustomCommand* cmd : cmds) {
@@ -88,34 +88,8 @@ static void AppendSelectionHandlerButtons(SelectionToolbar* tb, const AppCommand
         if (len(b.userLabel) == 0) {
             continue;
         }
-        VecAppend(tb->buttons, b);
+        VecAppend(buttons, b);
     }
-}
-
-static void InitButtons(SelectionToolbar* tb, MainWindow* win) {
-    AppCommandCtx ctx = NewAppCommandCtx(win);
-    VecReset(tb->buttons);
-    Vec<int> ids;
-    CollectBuiltInSelectionToolbarCmds(ids);
-    for (int i = 0; i < len(ids); i++) {
-        if (ids[i] == 0) {
-            VecAppend(tb->buttons, {});
-            continue;
-        }
-        const SelectionToolbarButton* cand = FindCandidateButton(ids[i]);
-        if (!cand) {
-            continue;
-        }
-        CommandVisibility v = GetCommandVisibility(cand->cmdId, ctx, CommandSurface::Toolbar);
-        if (CommandShouldRemove(v)) {
-            continue;
-        }
-        SelectionToolbarButton b = *cand;
-        b.enabled = !CommandShouldDisable(v);
-        VecAppend(tb->buttons, b);
-    }
-    AppendSelectionHandlerButtons(tb, ctx);
-    NormalizeSelectionToolbarSeparators(tb->buttons);
 }
 
 static SelectionToolbar* GetOrCreateToolbar(MainWindow* win) {
@@ -182,7 +156,7 @@ static void ShowSelectionToolbarNow(MainWindow* win) {
     }
     SelectionToolbar* tb = GetOrCreateToolbar(win);
     tb->tab = win->CurrentTab();
-    InitButtons(tb, win);
+    InitButtons(tb->buttons, win);
     if (len(tb->buttons) == 0) {
         return;
     }
@@ -462,7 +436,7 @@ TempStr SelectionToolbarLayoutDumpTemp(MainWindow* win) {
         out.Append(StrL("buttons=0\n"));
         return ToStrTemp(out);
     }
-    InitButtons(tb, win);
+    InitButtons(tb->buttons, win);
     int nSeparators = 0;
     for (const SelectionToolbarButton& b : tb->buttons) {
         if (b.cmdId == 0) {

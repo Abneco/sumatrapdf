@@ -71,7 +71,7 @@ struct SelectionToolbar {
 };
 
 // selection handlers that asked for a button with SelectToolbarNameOrSvg
-static void AppendSelectionHandlerButtons(SelectionToolbar* tb, const AppCommandCtx& ctx) {
+void AppendSelectionHandlerButtons(Vec<SelectionToolbarButton>& buttons, const AppCommandCtx& ctx) {
     Vec<CustomCommand*> cmds;
     GetCommandsWithOrigId(cmds, CmdSelectionHandler);
     for (CustomCommand* cmd : cmds) {
@@ -92,34 +92,8 @@ static void AppendSelectionHandlerButtons(SelectionToolbar* tb, const AppCommand
             b.userLabel = s;
         }
         b.enabled = !CommandShouldDisable(v);
-        VecAppend(tb->buttons, b);
+        VecAppend(buttons, b);
     }
-}
-
-static void InitButtons(SelectionToolbar* tb, MainWindow* win) {
-    AppCommandCtx ctx = NewAppCommandCtx(win);
-    VecReset(tb->buttons);
-    Vec<int> ids;
-    CollectBuiltInSelectionToolbarCmds(ids);
-    for (int i = 0; i < len(ids); i++) {
-        if (ids[i] == 0) {
-            VecAppend(tb->buttons, {});
-            continue;
-        }
-        const SelectionToolbarButton* cand = FindCandidateButton(ids[i]);
-        if (!cand) {
-            continue;
-        }
-        CommandVisibility v = GetCommandVisibility(cand->cmdId, ctx, CommandSurface::Toolbar);
-        if (CommandShouldRemove(v)) {
-            continue;
-        }
-        SelectionToolbarButton b = *cand;
-        b.enabled = !CommandShouldDisable(v);
-        VecAppend(tb->buttons, b);
-    }
-    AppendSelectionHandlerButtons(tb, ctx);
-    NormalizeSelectionToolbarSeparators(tb->buttons);
 }
 
 constexpr int kBtnPadX = 8; // horizontal padding inside a button
@@ -516,7 +490,7 @@ TempStr SelectionToolbarLayoutDumpTemp() {
         out.Append(StrL("buttons=0\n"));
         return ToStrTemp(out);
     }
-    InitButtons(tb, win);
+    InitButtons(tb->buttons, win);
     LayoutToolbar(tb);
     int nSeparators = 0;
     for (const SelectionToolbarButton& b : tb->buttons) {
@@ -600,7 +574,7 @@ static void ShowSelectionToolbarNow(MainWindow* win) {
     tb->tab = win->CurrentTab();
     tb->lastPositionUpdateTick = GetTickCount();
     tb->lastSelBounds = sel;
-    InitButtons(tb, win);
+    InitButtons(tb->buttons, win);
     if (len(tb->buttons) == 0) {
         return;
     }
@@ -713,7 +687,7 @@ void UpdateSelectionToolbarPosition(MainWindow* win) {
     tb->lastPositionUpdateTick = now;
     tb->lastSelBounds = sel;
 
-    InitButtons(tb, win);
+    InitButtons(tb->buttons, win);
     LayoutToolbar(tb);
     if (PositionToolbar(tb, sel)) {
         tb->host->Invalidate(false);

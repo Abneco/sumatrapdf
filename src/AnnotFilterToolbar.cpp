@@ -253,23 +253,6 @@ static void RebuildList(AnnotFilterToolbar* f) {
     UpdateFloatButtons(f);
 }
 
-// Reparse the filter box. Bad syntax (a typo in a ":" condition) would match
-// nothing, which reads as "the filter is broken"; treat it as plain text
-// instead, the way it behaved before conditions existed.
-static void SetFilter(AnnotFilterToolbar* f, Str text) {
-    f->filter.Reset();
-    f->filterWords.Reset();
-    if (!ParseAnnotSearch(text, f->filter)) {
-        f->filter.Reset();
-        StrVec words;
-        SplitFilterToWords(text, words);
-        for (Str w : words) {
-            AnnotSearchAddContentWord(f->filter, w);
-        }
-    }
-    AnnotSearchContentWords(f->filter, f->filterWords);
-}
-
 static void KillSelectionTimer(AnnotFilterToolbar* f) {
     if (!f) {
         return;
@@ -434,7 +417,7 @@ static void OnFilterTextChanged(AnnotFilterToolbar* f) {
     }
     WindowTab* tab = FilterTab(f);
     Annotation* keep = tab ? tab->selectedAnnotation : nullptr;
-    SetFilter(f, e->GetTextTemp());
+    SetAnnotFilter(f->filter, f->filterWords, e->GetTextTemp());
     LoadAnnotations(f);
     RebuildList(f);
     VirtListBox* lb = ActiveList(f);
@@ -1167,7 +1150,7 @@ void ApplyAnnotFilterText(MainWindow* win, Str text) {
     if (!f) {
         return;
     }
-    SetFilter(f, text);
+    SetAnnotFilter(f->filter, f->filterWords, text);
     LoadAnnotations(f);
     RebuildList(f);
     UpdateFloatButtons(f);

@@ -19,3 +19,8 @@ const SelectionToolbarButton* FindCandidateButton(int cmdId);
 void CollectBuiltInSelectionToolbarCmds(Vec<int>& out);
 void NormalizeSelectionToolbarSeparators(Vec<SelectionToolbarButton>& buttons);
 bool IsActivelySelecting(MainWindow* win);
+
+void InitButtons(Vec<SelectionToolbarButton>& buttons, MainWindow* win);
+
+// implemented by each app
+void AppendSelectionHandlerButtons(Vec<SelectionToolbarButton>& buttons, const AppCommandCtx& ctx);

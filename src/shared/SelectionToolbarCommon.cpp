@@ -127,3 +127,29 @@ bool IsActivelySelecting(MainWindow* win) {
     MouseAction ma = win->mouseAction;
     return ma == MouseAction::Selecting || ma == MouseAction::SelectingText;
 }
+
+void InitButtons(Vec<SelectionToolbarButton>& buttons, MainWindow* win) {
+    AppCommandCtx ctx = NewAppCommandCtx(win);
+    VecReset(buttons);
+    Vec<int> ids;
+    CollectBuiltInSelectionToolbarCmds(ids);
+    for (int i = 0; i < len(ids); i++) {
+        if (ids[i] == 0) {
+            VecAppend(buttons, {});
+            continue;
+        }
+        const SelectionToolbarButton* cand = FindCandidateButton(ids[i]);
+        if (!cand) {
+            continue;
+        }
+        CommandVisibility v = GetCommandVisibility(cand->cmdId, ctx, CommandSurface::Toolbar);
+        if (CommandShouldRemove(v)) {
+            continue;
+        }
+        SelectionToolbarButton b = *cand;
+        b.enabled = !CommandShouldDisable(v);
+        VecAppend(buttons, b);
+    }
+    AppendSelectionHandlerButtons(buttons, ctx);
+    NormalizeSelectionToolbarSeparators(buttons);
+}

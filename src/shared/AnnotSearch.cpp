@@ -187,3 +187,20 @@ void AnnotSearchContentWords(const AnnotMatchOpts& opts, StrVec& wordsOut) {
         }
     }
 }
+
+// Reparse the filter box. Bad syntax (a typo in a ":" condition) would match
+// nothing, which reads as "the filter is broken"; treat it as plain text
+// instead, the way it behaved before conditions existed.
+void SetAnnotFilter(AnnotMatchOpts& filter, StrVec& filterWords, Str text) {
+    filter.Reset();
+    filterWords.Reset();
+    if (!ParseAnnotSearch(text, filter)) {
+        filter.Reset();
+        StrVec words;
+        SplitFilterToWords(text, words);
+        for (Str w : words) {
+            AnnotSearchAddContentWord(filter, w);
+        }
+    }
+    AnnotSearchContentWords(filter, filterWords);
+}
