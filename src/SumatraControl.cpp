@@ -2136,42 +2136,6 @@ void SnapshotSessionRestore(ControlRequest* req) {
     req->done.Set();
 }
 
-static ControlRequest* ReadControlRequest(HANDLE h) {
-    u32 size = 0;
-    if (!ReadExact(h, &size, sizeof(size))) {
-        return nullptr;
-    }
-    if (size < 4 || size > 16 * 1024 * 1024) {
-        return nullptr;
-    }
-    u8* data = AllocArray<u8>((int)size);
-    if (!ReadExact(h, data, size)) {
-        free(data);
-        return nullptr;
-    }
-
-    PacketReader r{data, size};
-    ControlRequest* req = new ControlRequest();
-    if (!r.ReadU16(req->cmd) || !r.ReadU16(req->reqId) || !ParseArgList(r, &req->args, false)) {
-        DeleteControlRequest(req);
-        free(data);
-        return nullptr;
-    }
-    free(data);
-    return req;
-}
-
-static bool WriteControlResponse(HANDLE h, ControlRequest* req) {
-    str::Builder payload;
-    AppendU16(payload, req->reqId);
-    payload.Append(ToStr(req->results));
-
-    str::Builder packet;
-    AppendU32(packet, (u32)len(payload));
-    packet.Append(ToStr(payload));
-    return WriteExact(h, ToStr(packet));
-}
-
 // returns true if the app is quitting, so the listener thread should exit
 // instead of blocking in ConnectNamedPipe (ASan shutdown hangs on that)
 bool ProcessControlConnection(HANDLE h) {

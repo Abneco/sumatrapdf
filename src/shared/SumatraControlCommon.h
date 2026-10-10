@@ -119,6 +119,7 @@ void SnapshotRenderIdle(ControlRequest* req);
 void SnapshotSessionRestore(ControlRequest* req);
 
 #if OS_WIN
+using ControlConn = HANDLE;
 bool ReadExact(HANDLE h, void* data, DWORD n);
 bool WriteExact(HANDLE h, Str data);
 struct ControlThreadArg {
@@ -127,6 +128,11 @@ struct ControlThreadArg {
 void SumatraControlThread(ControlThreadArg* arg);
 // implemented by each app
 bool ProcessControlConnection(HANDLE h);
+#else
+// a connected unix domain socket
+using ControlConn = int;
+bool ReadExact(int fd, void* data, u32 n);
+bool WriteExact(int fd, Str data);
 #endif
 
 struct LayoutProbeState {
@@ -134,3 +140,6 @@ struct LayoutProbeState {
     int count = 0;
     bool active = false;
 };
+
+ControlRequest* ReadControlRequest(ControlConn h);
+bool WriteControlResponse(ControlConn h, ControlRequest* req);
