@@ -281,32 +281,6 @@ void UpdateFavoritesTree(MainWindow* win) {
     }
 }
 
-void AddFavoriteForPage(MainWindow* win, int pageNo) {
-    Str name;
-    auto* tab = win->CurrentTab();
-    auto* ctrl = tab ? tab->ctrl : nullptr;
-    if (!ctrl) {
-        return;
-    }
-    if (ctrl->HasToc()) {
-        // use the current ToC heading as default name
-        auto* docTree = ctrl->GetToc();
-        TocItem* root = docTree ? docTree->root : nullptr;
-        TocItem* item = TocItemForPageNo(root, pageNo);
-        if (item) {
-            name = item->title;
-        }
-    }
-    TempStr pageLabel;
-    if (ShowChapterUi(ctrl)) {
-        Location loc = ctrl->LocationFromPageNo(pageNo);
-        pageLabel = fmt("%d/%d", loc.chapter, loc.page);
-    } else {
-        pageLabel = ctrl->GetPageLabeTemp(pageNo);
-    }
-    AddFavoriteWithLabelAndName(win, pageNo, pageLabel, name);
-}
-
 void RememberFavTreeExpansionState(MainWindow* win) {
     VecReset(win->expandedFavorites);
     FavTreeModel* tm = SidebarFavModel(win);

@@ -349,6 +349,7 @@ function sumatrapdf_files()
     "FileThumbnailsCommon.*",
     "Flags.*",
     "FindBar.*",
+    "FindBarCommon.*",
     "FindWindow.*",
     "FormFields.*",
     "FormFieldsCommon.*",

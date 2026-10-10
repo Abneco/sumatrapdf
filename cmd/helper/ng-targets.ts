@@ -1377,6 +1377,7 @@ export const targets: Target[] = [
       "src/ng/SearchAndDDE.cpp",
       "src/ng/SearchAndDDECommon.cpp",
       "src/ng/FindBar.cpp",
+      "src/ng/FindBarCommon.cpp",
       "src/ng/FindWindow.cpp",
       "src/ng/Toolbar.cpp",
       "src/ng/ToolbarCommon.cpp",

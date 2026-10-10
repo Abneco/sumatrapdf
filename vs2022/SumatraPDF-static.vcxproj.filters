@@ -1256,6 +1256,9 @@
     <ClCompile Include="..\src\shared\FilterUtil.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\shared\FindBarCommon.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\shared\Flags.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
