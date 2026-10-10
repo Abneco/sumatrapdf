@@ -1259,6 +1259,9 @@
     <ClCompile Include="..\src\shared\Flags.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\shared\FormFieldsCommon.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\shared\GlobalHotkeysCommon_win.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>

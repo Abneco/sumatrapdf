@@ -1407,6 +1407,7 @@ export const targets: Target[] = [
       "src/ng/RefHoverRender.cpp",
       "src/ng/RefHoverShow.cpp",
       "src/ng/FormFields.cpp",
+      "src/ng/FormFieldsCommon.cpp",
       "src/ng/SavePathDialog.cpp",
       "src/ng/GoToPageDialog.cpp",
       "src/ng/SumatraDialogs.cpp",

@@ -238,3 +238,38 @@ void ShutdownAIChatForMainWindow(MainWindow* win) {
     }
     AIChatWaitForTabProcessesToFinish(win, AIChatTabHasRunningProcess);
 }
+
+// Auto-select the most recent session for the current tab if none is set
+void AutoSelectRecentSession(MainWindow* win) {
+    AIChatProvider* provider = CurrentProvider(win);
+    WindowTab* tab = win->CurrentTab();
+    AIChatTabState* st = GetTabState(tab, win->aiChatProvider);
+    if (!provider || !st || len(tab->filePath) == 0 || st->sessionId) {
+        return; // already has a session or no file
+    }
+
+    TempStr dir = path::GetDirTemp(tab->filePath);
+    Vec<AIChatSessionInfo> sessions;
+    provider->CollectSessions(dir, sessions);
+
+    if (len(sessions) > 0) {
+        // sessions are sorted by timestamp desc, so [0] is most recent
+        str::ReplaceWithCopy(&st->sessionId, sessions[0].sessionId);
+        WebViewClearChat(win);
+        provider->LoadSessionHistory(win, st->sessionId, dir);
+    }
+
+    AIChatFreeSessions(sessions);
+}
+
+void StopAIChat(MainWindow* win) {
+    AIChatProvider* provider = CurrentProvider(win);
+    WindowTab* tab = win->CurrentTab();
+    AIChatTabState* st = GetTabState(tab, win->aiChatProvider);
+    if (provider && st && st->process) {
+        AIChatLog(provider->logger, StrL("stop"), st->sessionId ? st->sessionId : StrL("(no session)"));
+        AIChatCloseProcess(&st->process, true);
+        WebViewAddError(win, StrL("Stopped by user."));
+        SetAIChatWorking(win, false);
+    }
+}

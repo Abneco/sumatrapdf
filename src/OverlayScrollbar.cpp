@@ -924,21 +924,3 @@ void OverlayScrollbarShow(OverlayScrollbar* sb, bool show) {
     ShowScrollbarHwnd(sb);
     PaintScrollbar(sb);
 }
-
-// Change the scrollbar mode (Smart vs Thick)
-void OverlayScrollbarSetMode(OverlayScrollbar* sb, OverlayScrollbar::Mode mode) {
-    if (!sb || sb->mode == mode) {
-        return;
-    }
-    sb->mode = mode;
-    if (!IsActive(sb)) {
-        return;
-    }
-    // transition to the appropriate state for the new mode
-    if (mode == OverlayScrollbar::Mode::Thick) {
-        SetState(sb, State::AlwaysThick);
-    } else {
-        // Smart mode: start as thin, will auto-hide
-        SetState(sb, State::SmartThin);
-    }
-}

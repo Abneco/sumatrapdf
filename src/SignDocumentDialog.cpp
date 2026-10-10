@@ -518,30 +518,6 @@ void SignDocumentWnd::OnCancel(VirtMouseEvent*) {
     ScheduleDelete();
 }
 
-// mupdf reports a certificate it can't open as a raw Win32 failure
-// ("PFXImportCertStore failed (gle=86)"). A mistyped password is by far the
-// most likely cause of gle=86 (ERROR_INVALID_PASSWORD), so say that instead.
-static TempStr SignErrorMessageTemp(Str err) {
-    if (len(err) == 0) {
-        return Tr("Could not sign the document.");
-    }
-    if (str::Contains(err, StrL("PFXImportCertStore"))) {
-        if (str::Contains(err, StrL("gle=86"))) {
-            return Tr("Wrong password for the certificate file.");
-        }
-        return fmt(Tr("Could not read the certificate file: %s").s, err);
-    }
-    if (str::Contains(err, StrL("not found in the Windows certificate store")) ||
-        str::Contains(err, StrL("invalid certificate thumbprint"))) {
-        return Tr("Could not use that certificate from the Windows certificate store.");
-    }
-    if (str::Contains(err, StrL("could not read signature image")) || str::Contains(err, StrL("cannot create image")) ||
-        str::Contains(err, StrL("unknown image format"))) {
-        return Tr("Could not read the signature image.");
-    }
-    return str::DupTemp(err);
-}
-
 void SignDocumentWnd::DoSign(const PdfSignArgs& args) {
     EngineBase* engine = GetPdfEngine(win);
     if (!engine) {

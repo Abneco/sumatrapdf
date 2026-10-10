@@ -791,3 +791,65 @@ void AnnotationPlacementOnSelectionStop(MainWindow* win) {
     }
     PlacementRunCreateCmd(win, win->annotPlacement.cmdId, Point{});
 }
+
+// Enter/Space finish polyline; Enter finishes ink. Starting another placement
+// while ink has strokes also finishes it so the drawing isn't thrown away.
+bool FinishAnnotationPlacement(MainWindow* win) {
+    AnnotPlacementKind kind = KindOf(win);
+    if (kind == AnnotPlacementKind::PolyLine) {
+        AnnotPlacement& p = win->annotPlacement;
+        if (len(p.points) < 2) {
+            return true;
+        }
+        DisplayModel* dm = win->AsFixed();
+        if (!dm || !dm->ValidPageNo(p.pageNo)) {
+            CancelAnnotationPlacement(win);
+            return true;
+        }
+        Point pt = dm->CvtToScreen(p.pageNo, VecLast(p.points));
+        CommitPlacementCommand(win, pt);
+        return true;
+    }
+    if (kind == AnnotPlacementKind::Ink) {
+        AnnotPlacement& p = win->annotPlacement;
+        if (len(p.points) == 0) {
+            CancelAnnotationPlacement(win);
+            return true;
+        }
+        DisplayModel* dm = win->AsFixed();
+        if (!dm || !dm->ValidPageNo(p.pageNo)) {
+            CancelAnnotationPlacement(win);
+            return true;
+        }
+        ReleasePlacementCapture(win);
+        p.mouseDown = false;
+        Point pt = dm->CvtToScreen(p.pageNo, VecLast(p.points));
+        CommitPlacementCommand(win, pt);
+        return true;
+    }
+    return false;
+}
+
+TempStr PointPlacementDumpLineTemp(MainWindow* win, AnnotPlacementKind kind, Str key, bool svgCursor) {
+    bool active = KindOf(win) == kind;
+    if (!win) {
+        if (svgCursor) {
+            return fmt("%s active=0 notification=0 cursor=0 cmd=0 message=\n", key);
+        }
+        return fmt("%s active=0 notification=0 cursor=0 preview=0 cmd=0 message=\n", key);
+    }
+    NotificationWnd* notif = active ? GetNotificationForGroup(win, NotifGroupForKind(kind)) : nullptr;
+    Str message = NotificationGetMessageTemp(notif);
+    bool cursor = PlacementDumpCursor(win, kind, active);
+    int cmdOut = active ? win->annotPlacement.cmdId : 0;
+    if (svgCursor) {
+        return fmt("%s active=%d notification=%d cursor=%d cmd=%d message=%s\n", key, active ? 1 : 0, notif ? 1 : 0,
+                   cursor ? 1 : 0, cmdOut, message);
+    }
+    DisplayModel* dm = active ? win->AsFixed() : nullptr;
+    Point pt = win->annotPlacement.pos;
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    bool preview = active && dm && dm->ValidPageNo(pageNo);
+    return fmt("%s active=%d notification=%d cursor=%d preview=%d cmd=%d message=%s\n", key, active ? 1 : 0,
+               notif ? 1 : 0, cursor ? 1 : 0, preview ? 1 : 0, cmdOut, message);
+}

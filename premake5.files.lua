@@ -351,6 +351,7 @@ function sumatrapdf_files()
     "FindBar.*",
     "FindWindow.*",
     "FormFields.*",
+    "FormFieldsCommon.*",
     "ImageReader.h",
     "ImageReader.cpp",
     "GlobalHotkeys.*",

@@ -32,3 +32,6 @@ struct AIChatCaptureSink {
     str::Builder err;
     bool finished = false;
 };
+
+void AutoSelectRecentSession(MainWindow* win);
+void StopAIChat(MainWindow* win);

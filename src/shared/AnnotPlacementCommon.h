@@ -52,7 +52,10 @@ void PlacementFocusFrame(MainWindow* win);
 void PlacementCaptureMouse(MainWindow* win);
 void PlacementReleaseMouse(MainWindow* win);
 void ReleasePlacementCapture(MainWindow* win);
+bool PlacementDumpCursor(MainWindow* win, AnnotPlacementKind kind, bool active);
 void RestoreCanvasCursor(MainWindow* win);
 void PlacementRunCreateCmd(MainWindow* win, int cmdId, Point pt);
 // orig's Canvas.cpp, ng's gui/DocCanvas.cpp
 bool IsDragDistance(int x1, int x2, int y1, int y2);
+
+TempStr PointPlacementDumpLineTemp(MainWindow* win, AnnotPlacementKind kind, Str key, bool svgCursor);

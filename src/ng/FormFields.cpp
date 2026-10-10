@@ -189,28 +189,6 @@ static bool FieldTextWithinLimit(gp::Str text, int64_t maxLen) {
     return Utf8CodepointCount(FromGpui(text)) <= (int)maxLen;
 }
 
-// Clicking a signature field the document's author left unsigned opens Sign
-// Document with that field selected. Signed fields are left alone (clicking one
-// shouldn't offer to overwrite it), and so is everything else (issue #5964).
-bool StartSignatureFieldSigning(MainWindow* win, Annotation* widget) {
-    if (!win || !AnnotationIsLive(widget)) {
-        return false;
-    }
-    if (GetWidgetType(widget) != PDF_WIDGET_TYPE_SIGNATURE) {
-        return false;
-    }
-    if (GetWidgetFieldFlags(widget) & PDF_FIELD_IS_READ_ONLY) {
-        return false;
-    }
-    TempStr fieldName;
-    if (!IsUnsignedSignatureWidget(widget, &fieldName)) {
-        return false;
-    }
-    logf("StartSignatureFieldSigning: '%s'\n", fieldName);
-    ShowSignDocumentDialog(win, fieldName, true);
-    return true;
-}
-
 bool StartFormFieldEdit(MainWindow* win, Annotation* widget) {
     if (!win || !win->gpuiWin || !AnnotationIsLive(widget)) {
         return false;

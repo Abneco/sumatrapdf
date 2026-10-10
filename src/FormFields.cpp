@@ -299,37 +299,6 @@ static bool StartChoiceEdit(MainWindow* win, Annotation* widget, Rect rc) {
     return true;
 }
 
-// Start editing a text form field in place (floats an edit box over the field).
-// Returns false if `widget` isn't an editable (non-read-only) text widget.
-// Clicking a signature field the document's author left unsigned opens Sign
-// Document with that field selected. Signed fields are left alone (clicking one
-// shouldn't offer to overwrite it), and so is everything else (issue #5964).
-bool StartSignatureFieldSigning(MainWindow* win, Annotation* widget) {
-    if (!win || !AnnotationIsLive(widget)) {
-        return false;
-    }
-    if (GetWidgetType(widget) != PDF_WIDGET_TYPE_SIGNATURE) {
-        return false;
-    }
-    if (GetWidgetFieldFlags(widget) & PDF_FIELD_IS_READ_ONLY) {
-        return false;
-    }
-    // signing rewrites the PDF, so it needs the same engine support annotations
-    // do - and the same gate that decides whether the Sign Document command is
-    // shown at all, so a click can't reach a dialog the menu is hiding
-    DisplayModel* dm = win->AsFixed();
-    if (!dm || !EngineSupportsAnnotations(dm->GetEngine()) || win->isFullScreen) {
-        return false;
-    }
-    TempStr fieldName;
-    if (!IsUnsignedSignatureWidget(widget, &fieldName)) {
-        return false;
-    }
-    CommitFormFieldEdit(true); // don't leave an in-place edit hanging
-    ShowSignDocumentDialog(win, fieldName, true);
-    return true;
-}
-
 bool StartFormFieldEdit(MainWindow* win, Annotation* widget) {
     if (!win || !AnnotationIsLive(widget)) {
         return false;

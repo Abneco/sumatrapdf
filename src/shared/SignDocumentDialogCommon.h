@@ -6,3 +6,5 @@
 EngineBase* GetPdfEngine(MainWindow* win);
 RectF SelectionRect(WindowTab* tab, int* pageNoOut);
 RectF DefaultSignatureRectAt(DisplayModel* dm, int pageNo, PointF pt);
+
+TempStr SignErrorMessageTemp(Str err);
