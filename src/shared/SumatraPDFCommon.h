@@ -168,3 +168,12 @@ void DeleteCachedFiles(MainWindow* win);
 void UndoRedoInTab(WindowTab* tab, bool redo);
 void UpdateSettings(const Flags& i);
 void CancelDrag(MainWindow* win);
+
+Annotation* MakeAnnotationsFromSelection(WindowTab* tab, AnnotCreateArgs* args);
+void RemoveDeletedFilesFromHistory(MainWindow* win);
+void ApplyRedactionsInTab(WindowTab* tab);
+
+void SendMyselfDDE(Str cmdA, HWND targetHwnd);
+bool IsSimpleOpenCase(const Flags& i, bool isFirstWin);
+void OpenUsingDDE(HWND targetHwnd, Str path, Flags& i, bool isFirstWin);
+bool SetupPluginMode(Flags& i);

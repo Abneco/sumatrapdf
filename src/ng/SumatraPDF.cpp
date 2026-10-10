@@ -152,9 +152,6 @@ constexpr int kDefaultCitationHoverDelay = 300;
 // -crash-on-open: crash while opening a document, to test the crash handler
 static bool gCrashOnOpen = false;
 
-// ng: the plugin host is step 17, so the app is never in plugin mode yet
-Str gPluginURL;
-
 // lets the shell open a URI for any supported scheme in
 // the appropriate application (web browser, mail client, etc.)
 bool SumatraLaunchBrowser(Str url) {
@@ -2310,100 +2307,6 @@ void RerenderTabPage(WindowTab* tab, int pageNo) {
     AppShellInvalidate(win);
 }
 
-static void AddUniquePageNo(Vec<int>& pageNos, int pageNo) {
-    if (!VecContains(pageNos, pageNo)) {
-        VecAppend(pageNos, pageNo);
-    }
-}
-
-static RectF SelectionRectsUnion(const Vec<RectF>& rects) {
-    RectF covered;
-    for (const RectF& r : rects) {
-        covered = covered.IsEmpty() ? r : covered.Union(r);
-    }
-    return covered;
-}
-
-static Annotation* MakeAnnotationsFromSelection(WindowTab* tab, AnnotCreateArgs* args) {
-    DisplayModel* dm = tab->AsFixed();
-    if (!dm) {
-        return nullptr;
-    }
-    auto* engine = dm->GetEngine();
-    bool supportsAnnots = EngineSupportsAnnotations(engine);
-    MainWindow* win = tab->win;
-    bool ok = supportsAnnots && win->showSelection && tab->selectionOnPage;
-    if (!ok) {
-        return nullptr;
-    }
-    // highlight / underline / squiggly / strike out mark up runs of *text*. A
-    // rectangular selection (Ctrl+drag, Select All) isn't one - marking up its
-    // bounding boxes produced bars over whitespace - so do nothing.
-    bool isTextSelection = dm->textSelection && dm->textSelection->result.len > 0;
-    if (!isTextSelection) {
-        return nullptr;
-    }
-
-    Vec<SelectionOnPage>* s = tab->selectionOnPage;
-    Vec<int> pageNos;
-    for (auto& sel : *s) {
-        int pageNo = sel.pageNo;
-        if (!dm->ValidPageNo(pageNo)) {
-            continue;
-        }
-        AddUniquePageNo(pageNos, pageNo);
-    }
-    if (len(pageNos) == 0) {
-        return nullptr;
-    }
-
-    if (args->setContentToSelection) {
-        bool isTextOnlySelection = false;
-        args->content = GetSelectedTextTemp(tab, StrL("\r\n"), isTextOnlySelection);
-    }
-
-    Annotation* annot = nullptr;
-    Vec<Annotation*> created;
-    // Creating annotations and setting their quad points is one gesture.
-    EngineMupdfBeginOperation(engine, "Mark up selection");
-    defer {
-        EngineMupdfEndOperation(engine);
-    };
-    for (auto pageNo : pageNos) {
-        Vec<RectF> rects;
-        for (auto& sel : *s) {
-            if (pageNo != sel.pageNo) {
-                continue;
-            }
-            VecAppend(rects, sel.rect);
-        }
-        annot = EngineMupdfCreateAnnotation(engine, pageNo, PointF{}, args);
-        if (!annot) {
-            // Roll back annots created earlier in this call so we do not leave
-            // partial multi-page selections as untracked annotations.
-            for (Annotation* a : created) {
-                DeleteAnnotation(a);
-            }
-            return nullptr;
-        }
-        SetQuadPointsAsRect(annot, rects);
-        annot->bounds = GetBounds(annot);
-        // Hit testing uses this cache. pdf_bound_annot can miss the quads.
-        RectF covered = SelectionRectsUnion(rects);
-        if (!covered.IsEmpty() && (annot->bounds.IsEmpty() || annot->bounds.Intersect(covered).IsEmpty())) {
-            annot->bounds = covered;
-        }
-        VecAppend(created, annot);
-    }
-
-    // copy selection to clipboard so that user can use Ctrl-V to set contents
-    if (args->copyToClipboard) {
-        CopySelectionToClipboard(win);
-    }
-    // callers refresh lists and rerender
-    return annot;
-}
-
 // A cut removes the original only after its copy has landed, so a failed paste
 // can't lose the annotation (issue #5222).
 static void DeleteCutAnnotationAfterPaste(WindowTab* tab) {
@@ -2445,45 +2348,6 @@ static void PasteAnnotationInTab(MainWindow* win, WindowTab* tab) {
     ToolbarUpdateStateForWindow(win, true);
     EnablePdfAnnotationsToolbar(win);
     SetSelectedAnnotation(tab, pasted);
-}
-
-static void ApplyRedactionsInTab(WindowTab* tab) {
-    MainWindow* win = tab ? tab->win : nullptr;
-    DisplayModel* dm = tab ? tab->AsFixed() : nullptr;
-    if (!win || !dm) {
-        return;
-    }
-    EngineBase* engine = dm->GetEngine();
-    if (!engine || !EngineSupportsAnnotations(engine)) {
-        return;
-    }
-    CancelAnnotationPlacement(win);
-    CanvasCancelDrag(win);
-
-    if (!EngineHasRedactMarks(engine)) {
-        ShowTemporaryNotification(win, Tr("No redaction marks to apply"));
-        return;
-    }
-    if (gRenderCache) {
-        gRenderCache->AbortRendering(dm);
-    }
-    SetSelectedAnnotation(tab, nullptr);
-
-    Vec<Annotation*> deleted;
-    bool ok = EngineMupdfApplyRedactions(engine, deleted);
-    for (Annotation* a : deleted) {
-        DetachAnnotationFromUI(a);
-        DeleteAnnotation(a);
-    }
-    DeleteOldSelectionInfo(win, true);
-    RefreshAnnotationLists(tab);
-    ToolbarUpdateStateForWindow(win, true);
-    if (!ok) {
-        ShowWarningNotification(win, Tr("Failed to apply redactions"), kNotif5SecsTimeOut);
-        return;
-    }
-    MainWindowRerender(win);
-    ShowTemporaryNotification(win, Tr("Redactions applied."), kNotif5SecsTimeOut);
 }
 
 void DeleteSelectedAnnotation(MainWindow* win) {
@@ -4480,48 +4344,6 @@ static void CopyLocationToClipboard(MainWindow* win, WindowTab* tab) {
     }
     TempStr loc = fmt("-page %d -zoom \"%s\"%s \"%s\"", pageNo, ZoomArgTemp(ctrl), scrollArg, tab->filePath);
     CopyTextToClipboard(win, loc);
-}
-
-// looks through the file history and removes entries for files that no
-// longer exist on disk. Done synchronously on the main thread for simplicity.
-static void RemoveDeletedFilesFromHistory(MainWindow* win) {
-    Vec<FileState*>* states = FileHistoryStates();
-    if (!win || !states) {
-        return;
-    }
-    int nRemoved = 0;
-    // iterate from the end because removing changes indices
-    for (int i = len(*states) - 1; i >= 0; i--) {
-        FileState* fs = (*states)[i];
-        Str path = fs->filePath;
-        if (len(path) == 0) {
-            continue;
-        }
-        // Skip only when we can't tell deleted from "drive is away": an
-        // unplugged USB or offline share (orig, issue #5970)
-        if (!path::IsOnAvailableDrive(path)) {
-            continue;
-        }
-        if (DocumentPathExists(path)) {
-            continue;
-        }
-        // don't remove a file that's currently open in some tab
-        if (FindTabByFilePath(path)) {
-            continue;
-        }
-        logf("RemoveDeletedFilesFromHistory: removed '%s'\n", path);
-        DeleteThumbnailForFile(path);
-        // drops the home page layout cache, which points at fs
-        FileHistoryRemove(fs);
-        DeleteFileState(fs);
-        nRemoved++;
-    }
-    if (nRemoved > 0) {
-        ScheduleSaveSettings();
-        MaybeRedrawHomePage();
-    }
-    TempStr msg = fmt(Tr("Deleted files removed from history: %d").s, nRemoved);
-    ShowTemporaryNotification(win, msg, kNotif5SecsTimeOut);
 }
 
 // --- fullscreen and presentation mode ---------------------------------------
@@ -6705,93 +6527,6 @@ Retry:
     goto Retry;
 }
 
-static void SendMyselfDDE(Str cmdA, HWND targetHwnd) {
-    TempWStr cmd = ToWStrTemp(cmdA);
-    if (targetHwnd) {
-        // try WM_COPYDATA first, as that allows targetting a specific window
-        size_t cbData = (size_t)(len(cmd) + 1) * sizeof(WCHAR);
-        COPYDATASTRUCT cds = {kCopyDataDdeW, (DWORD)cbData, (void*)cmd.s};
-        LRESULT res = SendMessageW(targetHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
-        if (res) {
-            return;
-        }
-        // fall-through to DDEExecute if wasn't handled
-    }
-    DDEExecute(WStr((WCHAR*)kSumatraDdeServer), WStr((WCHAR*)kSumatraDdeTopic), cmd);
-}
-
-// Returns true if the only thing the caller wants is to open a file (no
-// goto-page, no view overrides, etc.). In that case we can use the cheaper
-// kCopyDataOpen fast path instead of building a DDE grammar string and blocking
-// the caller in SendMessageW while the receiver loads the document.
-static bool IsSimpleOpenCase(const Flags& i, bool isFirstWin) {
-    if (!isFirstWin) {
-        return true; // extras only apply to the first window
-    }
-    if (i.namedDest || i.pageNumber > 0) {
-        return false;
-    }
-    if (i.startView != DisplayMode::Automatic || i.startZoom != kInvalidZoom) {
-        return false;
-    }
-    if (i.startScroll.x != -1 && i.startScroll.y != -1) {
-        return false;
-    }
-    if (i.search) {
-        return false;
-    }
-    if (i.enterPresentation || i.enterFullScreen) {
-        return false;
-    }
-    return true;
-}
-
-// delegate file opening to a previously running instance by sending a DDE message
-static void OpenUsingDDE(HWND targetHwnd, Str path, Flags& i, bool isFirstWin) {
-    TempStr fullPath = path::NormalizeTemp(path);
-
-    // 2 forces opening a new window
-    u32 newWindow = i.inNewWindow ? 2 : 0;
-
-    // Common case: Explorer double-clicks a file while SumatraPDF is already
-    // running (reuseInstance). Use the simpler kCopyDataOpen format; the
-    // receiver loads async so Explorer's child SumatraPDF process can exit
-    // instantly instead of blocking on the file load.
-    if (targetHwnd && !i.reuseDdeInstance && IsSimpleOpenCase(i, isFirstWin)) {
-        if (SendOpenFileToExistingInstance(targetHwnd, fullPath, newWindow)) {
-            return;
-        }
-        // fall through to the DDE grammar path if WM_COPYDATA wasn't handled
-    }
-
-    str::Builder cmd;
-    cmd.Append(fmt("[Open(\"%s\", %d, 1, 0)]", fullPath, newWindow));
-    if (i.namedDest && isFirstWin) {
-        cmd.Append(fmt("[GotoNamedDest(\"%s\", \"%s\")]", fullPath, i.namedDest));
-    } else if (i.pageNumber > 0 && isFirstWin) {
-        cmd.Append(fmt("[GotoPage(\"%s\", %d)]", fullPath, i.pageNumber));
-    }
-    if ((i.startView != DisplayMode::Automatic || i.startZoom != kInvalidZoom ||
-         (i.startScroll.x != -1 && i.startScroll.y != -1)) &&
-        isFirstWin) {
-        Str viewModeStr = DisplayModeToString(i.startView);
-        cmd.Append(fmt("[SetView(\"%s\", \"%s\", %.2f, %d, %d)]", fullPath, viewModeStr, i.startZoom, i.startScroll.x,
-                       i.startScroll.y));
-    }
-    if (i.search) {
-        cmd.Append(fmt("[Search(\"%s\",\"%s\")]", fullPath, i.search));
-    }
-    if ((i.enterPresentation || i.enterFullScreen) && isFirstWin) {
-        Str name = i.enterPresentation ? StrL("Presentation") : StrL("FullScreen");
-        cmd.Append(fmt("[%s(\"%s\")]", name, fullPath));
-    }
-
-    if (i.reuseDdeInstance) {
-        targetHwnd = nullptr; // force DDEExecute
-    }
-    SendMyselfDDE(ToStr(cmd), targetHwnd);
-}
-
 // orig's WinMain: hand the command line to an already running instance when
 // -reuse-instance / -dde / the ReuseInstance setting asks for it. Returns true
 // when this process is done and should exit.
@@ -6870,65 +6605,6 @@ static bool ForwardToExistingInstance(Flags& flags, HANDLE* hMutex) {
 #endif
 
 #if OS_WIN
-static bool SetupPluginMode(Flags& i) {
-    if (!IsWindow(i.hwndPluginParent) || len(i.fileNames) == 0) {
-        return false;
-    }
-
-    gPluginURL = Str(i.pluginURL);
-    if (len(gPluginURL) == 0) {
-        gPluginURL = Str(i.fileNames[0]);
-    }
-
-    // don't save preferences for plugin windows (and don't allow fullscreen mode)
-    // TODO: Perm::DiskAccess is required for saving viewed files and printing and
-    //       Perm::InternetAccess is required for crash reports
-    // (they can still be disabled through sumatrapdfrestrict.ini or -restrict)
-    RestrictPolicies(Perm::SavePreferences | Perm::FullscreenAccess);
-
-    i.reuseDdeInstance = i.exitWhenDone = false;
-    gSettings->reuseInstance = false;
-    // don't allow tabbed navigation
-    gSettings->useTabs = false;
-    // always display the toolbar when embedded (as there's no menubar in that case)
-    gSettings->showToolbar = true;
-    // never allow esc as a shortcut to quit
-    gSettings->escToExit = false;
-    // never show the sidebar by default
-    gSettings->showToc = false;
-    if (DisplayMode::Automatic == gSettings->defaultDisplayModeEnum) {
-        // if the user hasn't changed the default display mode,
-        // display documents as single page/continuous/fit width
-        // (similar to Adobe Reader, Google Chrome and how browsers display HTML)
-        gSettings->defaultDisplayModeEnum = DisplayMode::Continuous;
-        gSettings->defaultZoomFloat = kZoomFitWidth;
-    }
-    // use fixed page UI for all document types (so that the context menu always
-    // contains all plugin specific entries and the main window is never closed)
-    gSettings->chmUI.useFixedPageUI = true;
-
-    // extract some command line arguments from the URL's hash fragment where available
-    // see http://www.adobe.com/devnet/acrobat/pdfs/pdf_open_parameters.pdf#nameddest=G4.1501531
-    int hashIdx = i.pluginURL ? str::IndexOfChar(i.pluginURL, '#') : -1;
-    if (hashIdx >= 0) {
-        TempStr args = str::DupTemp(Str(i.pluginURL.s + hashIdx + 1));
-        str::TransCharsInPlace(args, StrL("#"), StrL("&"));
-        StrVec parts;
-        Split(&parts, args, StrL("&"), true);
-        for (int k = 0; k < len(parts); k++) {
-            Str part = parts[k];
-            Str pageArg = part;
-            int pageNo;
-            if (str::TrimPrefixI(pageArg, StrL("page=")) && !str::IsNull(str::Parse(pageArg, "%d%$", &pageNo))) {
-                i.pageNumber = pageNo;
-            } else if ((str::TrimPrefixI(part, StrL("nameddest=")) || !str::ContainsChar(part, '=')) && part) {
-                // "nameddest=foo" or a bare fragment with no '='
-                i.namedDest = str::Dup(GetPermArena(), part);
-            }
-        }
-    }
-    return true;
-}
 
 // orig's MaybeMakePluginWindow(). gpui has no parent-window option in WinOpts
 // (see "gpui gaps"), but it does hand out the native handle, so the reparenting
