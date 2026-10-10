@@ -234,6 +234,7 @@ MainWindow* FindMainWindowBySyncFile(Str path, bool focusTab);
 WindowTab* FindTabByFile(Str file, MainWindow* limitWin = nullptr);
 WindowTab* FindTabByFilePath(Str path, MainWindow* limitWin);
 void ExecuteCmd(MainWindow* win, int cmdId);
+void OpenNextPrevFileInFolder(MainWindow* win, bool forward, Str pathToDelete = {});
 void SelectTabInWindow(WindowTab*);
 
 bool IsDocumentOpenOrLoading(Str file);

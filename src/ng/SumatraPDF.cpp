@@ -206,52 +206,6 @@ bool SettingsRememberOpenedFiles() {
     return gSettings->rememberOpenedFiles;
 }
 
-// ng: Windows keeps a file type's perceived type in the registry; elsewhere
-// it comes from a short list of extensions
-static TempStr PerceivedTypeTemp(Str path) {
-    TempStr ext = path::GetExtTemp(path);
-#if OS_WIN
-    return ReadRegStrTemp(HKEY_CLASSES_ROOT, ext, StrL("PerceivedType"));
-#else
-    static SeqStrings audioExts = ".mp3\0.wav\0.ogg\0.oga\0.flac\0.m4a\0.aac\0.opus\0.wma\0.mid\0.midi\0";
-    static SeqStrings videoExts = ".mp4\0.m4v\0.mkv\0.webm\0.avi\0.mov\0.mpg\0.mpeg\0.wmv\0.ogv\0";
-    TempStr extLower = str::DupTemp(ext);
-    str::ToLowerInPlace(extLower);
-    if (SeqStrIndex(audioExts, extLower) >= 0) {
-        return str::DupTemp(StrL("audio"));
-    }
-    if (SeqStrIndex(videoExts, extLower) >= 0) {
-        return str::DupTemp(StrL("video"));
-    }
-    return {};
-#endif
-}
-
-// lets the shell open a file of any supported perceived type
-// in the default application for opening such files
-bool OpenFileExternally(Str path) {
-    if (!CanAccessDisk() || gPluginMode) {
-        return false;
-    }
-
-    // check if this file's perceived type is allowed
-    TempStr perceivedType = PerceivedTypeTemp(path);
-    // since we allow following hyperlinks, also allow opening local webpages
-    if (str::EndsWithI(path, StrL(".htm")) || str::EndsWithI(path, StrL(".html")) ||
-        str::EndsWithI(path, StrL(".xhtml"))) {
-        perceivedType = str::DupTemp(StrL("webpage"));
-    }
-    str::ToLowerInPlace(perceivedType);
-    if (gAllowedFileTypes.Contains(StrL("*"))) {
-        /* allow all file types (not recommended) */;
-    } else if (len(perceivedType) == 0 || !gAllowedFileTypes.Contains(perceivedType)) {
-        return false;
-    }
-
-    // TODO: only do this for trusted files (cf. IsUntrustedFile)?
-    return LaunchFileShell(path);
-}
-
 void SetCurrentLanguageAndRefreshUI(Str langCode) {
     if (len(langCode) == 0 || str::Eq(langCode, trans::GetCurrentLangCode())) {
         return;
@@ -649,34 +603,10 @@ int ScrollbarModeFromPrefs() {
 
 // orig's OnMenuViewShowHideToolbar: F8 cycles show -> overlay -> hide, except
 // on the home page where it only toggles show / hide
-static void OnMenuViewShowHideToolbar(MainWindow* win) {
-    if (win->isFullScreen) {
-        int mode = FullscreenToolbarModeFromPrefs();
-        int next = kToolbarShow;
-        if (mode == kToolbarShow) {
-            next = kToolbarOverlay;
-        } else if (mode == kToolbarOverlay) {
-            next = kToolbarHide;
-        }
-        SetFullscreenToolbarMode(next);
-    } else if (win->IsCurrentTabAbout()) {
-        int mode = ToolbarModeFromPrefs();
-        SetToolbarMode(mode == kToolbarHide ? kToolbarShow : kToolbarHide);
-    } else {
-        int mode = ToolbarModeFromPrefs();
-        int next = kToolbarShow;
-        if (mode == kToolbarShow) {
-            next = kToolbarOverlay;
-        } else if (mode == kToolbarOverlay) {
-            next = kToolbarHide;
-        }
-        SetToolbarMode(next);
-    }
-    for (MainWindow* w : gWindows) {
-        ShowOrHideToolbar(w);
-        AppShellSyncCanvasSize(w);
-        LayoutProbeNote(w);
-    }
+// the canvas takes the room the toolbar gave up, and the mode is remembered
+void ToolbarModeApplied(MainWindow* win) {
+    AppShellSyncCanvasSize(win);
+    LayoutProbeNote(win);
     ScheduleSaveSettings();
 }
 
@@ -987,49 +917,13 @@ static void CreateThumbnailFromFileThread(CreateThumbnailFromFileData* d) {
 // create a thumbnail by loading the file with a temporary engine; independent
 // of the tab lifecycle, so it works even if the tab is closed before the
 // render completes
-static void CreateThumbnailFromFileAsync(FileState* ds, EngineBase* engine) {
+void CreateThumbnailFromFileAsync(FileState* ds, EngineBase* engine) {
     auto* d = new CreateThumbnailFromFileData();
     d->filePath = str::Dup(ds->filePath);
     d->engine = engine;
     d->fileEBookUI = CopyFileEBookUI(ds->eBookUI);
     auto fn = MkFunc0<CreateThumbnailFromFileData>(CreateThumbnailFromFileThread, d);
     RunAsync(fn, StrL("CreateThumbnailFromFile"));
-}
-
-static void CreateThumbnailForFile(MainWindow* win, FileState* ds) {
-    if (!ds || !ShouldSaveThumbnail(ds)) {
-        return;
-    }
-
-    // don't create thumbnails for password protected documents
-    // (unless we're also remembering the decryption key anyway)
-    if (win->IsDocLoaded()) {
-        auto* model = win->AsFixed();
-        if (model) {
-            auto* engine = model->GetEngine();
-            bool withPwd = engine->isPasswordProtected;
-            Str decrKey = engine->decryptionKey;
-            if (withPwd && len(decrKey) == 0) {
-                RemoveThumbnail(ds);
-                return;
-            }
-            // save decryption key to file history so the thumbnail thread can use it
-            if (decrKey && !str::Eq(ds->decryptionKey, decrKey)) {
-                str::ReplaceWithCopy(&ds->decryptionKey, decrKey);
-            }
-        }
-    }
-
-    // Reopening a converted file can take seconds, so hand the thread a clone
-    // of the engine we already have.
-    EngineBase* clone = nullptr;
-    DisplayModel* dm = win->IsDocLoaded() ? win->AsFixed() : nullptr;
-    EngineBase* engine = dm ? dm->GetEngine() : nullptr;
-    if (engine && (engine->kind == kindEnginePostScript || engine->kind == kindEngineDvi) &&
-        str::Eq(engine->FilePath(), ds->filePath)) {
-        clone = engine->Clone();
-    }
-    CreateThumbnailFromFileAsync(ds, clone);
 }
 
 // --- loading a document -----------------------------------------------------
@@ -2384,7 +2278,7 @@ void OpenNextPrevFileInFolder(MainWindow* win, bool forward, Str pathToDelete) {
 
 // --- annotations (step 13a) -------------------------------------------------
 
-void MainWindowRerender(MainWindow* win) {
+void MainWindowRerender(MainWindow* win, bool) {
     DisplayModel* dm = win ? win->AsFixed() : nullptr;
     if (!dm) {
         return;
@@ -2968,49 +2862,12 @@ void SaveEmbeddedFileAs(MainWindow* win, Annotation* annot, Str fileName) {
 
 // Step the document's edit history. MuPDF restores the objects; every wrapper,
 // selection and cached rendering that pointed at the old state has to go.
-static void UndoRedoInTab(WindowTab* tab, bool redo) {
-    if (!tab) {
-        return;
-    }
-    MainWindow* win = tab->win;
-    DisplayModel* dm = tab->AsFixed();
-    if (!win || !dm) {
-        return;
-    }
-    EngineBase* engine = dm->GetEngine();
-    if (!engine || !EngineSupportsAnnotations(engine)) {
-        return;
-    }
-    bool can = redo ? EngineMupdfCanRedo(engine) : EngineMupdfCanUndo(engine);
-    if (!can) {
-        ShowWarningNotification(win, redo ? Tr("Nothing to redo") : Tr("Nothing to undo"), kNotif5SecsTimeOut);
-        return;
-    }
+void UndoRedoUnavailable(MainWindow* win, bool redo) {
+    ShowWarningNotification(win, redo ? Tr("Nothing to redo") : Tr("Nothing to undo"), kNotif5SecsTimeOut);
+}
 
-    // an in-flight placement or drag would write to what we are about to undo
-    CancelAnnotationPlacement(win);
+void CancelDrag(MainWindow* win) {
     CanvasCancelDrag(win);
-    SetSelectedAnnotation(tab, nullptr);
-    if (gRenderCache) {
-        gRenderCache->AbortRendering(dm);
-    }
-
-    Vec<Annotation*> removed;
-    bool ok = redo ? EngineMupdfRedo(engine, removed) : EngineMupdfUndo(engine, removed);
-    for (Annotation* a : removed) {
-        DetachAnnotationFromUI(a);
-        DeleteAnnotation(a);
-    }
-    // the wrapper deletes above mark the document modified; the journal knows better
-    EngineMupdfRefreshModifiedState(engine);
-    DeleteOldSelectionInfo(win, true);
-    RefreshAnnotationLists(tab);
-    NotifyAnnotationsChanged(tab);
-    ToolbarUpdateStateForWindow(win, true);
-    MainWindowRerender(win);
-    if (!ok) {
-        ShowWarningNotification(win, redo ? Tr("Nothing to redo") : Tr("Nothing to undo"), kNotif5SecsTimeOut);
-    }
 }
 
 // what the plain Save As dialog's answer is applied to
@@ -3263,20 +3120,6 @@ static void DeleteCurrentFile(MainWindow* win) {
     }
 }
 
-static void DeleteCurrentFileAndOpenNext(MainWindow* win) {
-    if (!CanAccessDisk() || !win->IsDocLoaded() || gPluginMode) {
-        return;
-    }
-    Str path = str::Dup(win->ctrl->GetFilePath());
-    // this happens e.g. for embedded documents and directories
-    if (len(path) == 0 || !file::Exists(path)) {
-        str::Free(path);
-        return;
-    }
-    OpenNextPrevFileInFolder(win, true, path);
-    str::Free(path);
-}
-
 #if OS_WIN
 // the .lnk the shortcut dialog is about to write
 struct LnkShortcutCtx {
@@ -3355,51 +3198,6 @@ static void CreateLnkShortcut(MainWindow* win) {
     ShowSavePathDialog(args);
 }
 #endif
-
-// Unconditionally delete all local copies of comic-book archives that were
-// cached under <data>/cbx-cache/ when opening them from a network drive.
-// Safe to call with no open document; open documents may still hold a lock
-// on a cache file so some deletes can fail (logged).
-static void DeleteCachedFiles(MainWindow* win) {
-    int nDeleted = 0;
-    int nFailed = 0;
-    TempStr dataDir = GetSumatraDataDirTemp();
-    if (len(dataDir) > 0) {
-        TempStr cacheDir = path::JoinTemp(dataDir, StrL("cbx-cache"));
-        if (path::GetType(cacheDir) == path::Type::Dir) {
-            DirIter di{cacheDir};
-            di.includeFiles = true;
-            di.includeDirs = false;
-            for (DirIterEntry* de : di) {
-                TempStr sizeStr = str::FormatSizeShortTemp(de->size);
-                if (file::Delete(de->filePath)) {
-                    nDeleted++;
-                    logf("DeleteCachedFiles: deleted '%s' (%s)\n", de->filePath, sizeStr);
-                } else {
-                    nFailed++;
-                    logf("DeleteCachedFiles: failed to delete '%s' (%s)\n", de->filePath, sizeStr);
-                }
-            }
-            // remove the (now empty, or residual) cache directory itself
-            if (nFailed == 0) {
-                dir::RemoveAll(cacheDir);
-            }
-        }
-    }
-    logf("DeleteCachedFiles: deleted %d, failed %d\n", nDeleted, nFailed);
-    if (!win) {
-        return;
-    }
-    TempStr msg;
-    if (nDeleted == 0 && nFailed == 0) {
-        msg = fmt("%s", Tr("No cached comic book files."));
-    } else if (nFailed == 0) {
-        msg = fmt(Tr("Deleted %d cached comic book files.").s, nDeleted);
-    } else {
-        msg = fmt(Tr("Deleted %d cached comic book files, %d failed.").s, nDeleted, nFailed);
-    }
-    ShowTemporaryNotification(win, msg, kNotif5SecsTimeOut);
-}
 
 // CmdShowGeneratedHTML: the HTML the markdown viewer renders, as a file
 static void ShowGeneratedMarkdownHtml(MainWindow* win) {
@@ -7072,8 +6870,6 @@ static bool ForwardToExistingInstance(Flags& flags, HANDLE* hMutex) {
 #endif
 
 #if OS_WIN
-// orig's SetupPluginMode(): -plugin <parent hwnd> makes us a frameless viewer
-// inside a host window (a browser plugin). Windows only, as in orig.
 static bool SetupPluginMode(Flags& i) {
     if (!IsWindow(i.hwndPluginParent) || len(i.fileNames) == 0) {
         return false;
@@ -7085,6 +6881,9 @@ static bool SetupPluginMode(Flags& i) {
     }
 
     // don't save preferences for plugin windows (and don't allow fullscreen mode)
+    // TODO: Perm::DiskAccess is required for saving viewed files and printing and
+    //       Perm::InternetAccess is required for crash reports
+    // (they can still be disabled through sumatrapdfrestrict.ini or -restrict)
     RestrictPolicies(Perm::SavePreferences | Perm::FullscreenAccess);
 
     i.reuseDdeInstance = i.exitWhenDone = false;
@@ -7122,9 +6921,8 @@ static bool SetupPluginMode(Flags& i) {
             int pageNo;
             if (str::TrimPrefixI(pageArg, StrL("page=")) && !str::IsNull(str::Parse(pageArg, "%d%$", &pageNo))) {
                 i.pageNumber = pageNo;
-            } else if (str::TrimPrefixI(part, StrL("nameddest=")) && part) {
-                i.namedDest = str::Dup(GetPermArena(), part);
-            } else if (!str::ContainsChar(part, '=') && part) {
+            } else if ((str::TrimPrefixI(part, StrL("nameddest=")) || !str::ContainsChar(part, '=')) && part) {
+                // "nameddest=foo" or a bare fragment with no '='
                 i.namedDest = str::Dup(GetPermArena(), part);
             }
         }
@@ -7183,56 +6981,8 @@ double AppElapsedMs() {
     return TimeSinceInMs(gAppStartTime);
 }
 
-// orig's UpdateSettings: the command line flags that override a setting for
-// this run. ng: -window-pos is applied where the frame is placed
-// (CreateAndShowMainWindow), so it is not copied into gSettings here.
-static void UpdateSettings(const Flags& i) {
-    if (len(i.inverseSearchCmdLine) > 0) {
-        str::ReplaceWithCopy(&gSettings->inverseSearchCmdLine, i.inverseSearchCmdLine);
-        gSettings->enableTeXEnhancements = true;
-    }
-    if (i.invertColors) {
-        SetDocumentColorsFollowTheme(DocumentColorsFollowTheme::Smart);
-    }
-
-    Str arg;
-    Str param;
-    for (int n = 0; n < len(i.globalPrefArgs); n++) {
-        arg = i.globalPrefArgs[n];
-        if (str::EqI(arg, StrL("-esc-to-exit"))) {
-            gSettings->escToExit = true;
-        } else if (str::EqI(arg, StrL("-bgcolor")) || str::EqI(arg, StrL("-bg-color"))) {
-            // -bgcolor is for backwards compat (was used pre-1.3)
-            // -bg-color is for consistency
-            param = i.globalPrefArgs[++n];
-            ReplaceColor(gSettings->mainWindowBackground, param);
-        } else if (str::EqI(arg, StrL("-set-color-range"))) {
-            param = i.globalPrefArgs[++n];
-            ReplaceColor(gSettings->fixedPageUI.textColor, param);
-            param = i.globalPrefArgs[++n];
-            ReplaceColor(gSettings->fixedPageUI.backgroundColor, param);
-        } else if (str::EqI(arg, StrL("-fwdsearch-offset"))) {
-            param = i.globalPrefArgs[++n];
-            gSettings->forwardSearch.highlightOffset = ParseInt(param);
-            gSettings->enableTeXEnhancements = true;
-        } else if (str::EqI(arg, StrL("-fwdsearch-width"))) {
-            param = i.globalPrefArgs[++n];
-            gSettings->forwardSearch.highlightWidth = ParseInt(param);
-            gSettings->enableTeXEnhancements = true;
-        } else if (str::EqI(arg, StrL("-fwdsearch-color"))) {
-            param = i.globalPrefArgs[++n];
-            ReplaceColor(gSettings->forwardSearch.highlightColor, param);
-            gSettings->enableTeXEnhancements = true;
-        } else if (str::EqI(arg, StrL("-fwdsearch-permanent"))) {
-            param = i.globalPrefArgs[++n];
-            gSettings->forwardSearch.highlightPermanent = ParseInt(param);
-            gSettings->enableTeXEnhancements = true;
-        } else if (str::EqI(arg, StrL("-manga-mode"))) {
-            param = i.globalPrefArgs[++n];
-            gSettings->comicBookUI.cbxMangaMode = str::EqI(StrL("true"), param) || str::Eq(StrL("1"), param);
-        }
-    }
-}
+// ng applies -window-pos where the frame is placed (CreateAndShowMainWindow)
+void ApplyWindowPosFlag(const Flags&) {}
 
 extern "C" {
 int muconvert_main(int argc, char** argv);

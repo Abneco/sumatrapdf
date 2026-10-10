@@ -154,3 +154,17 @@ void ReopenLastClosedFile(MainWindow* win);
 
 bool SendOpenFileToExistingInstance(HWND targetHwnd, Str fullPath, u32 newWindow);
 bool SendOpenFilesToExistingInstance(HWND targetHwnd, StrVec& paths, u32 newWindow);
+
+// implemented by each app
+void UndoRedoUnavailable(MainWindow* win, bool redo);
+void ApplyWindowPosFlag(const Flags& i);
+void ToolbarModeApplied(MainWindow* win);
+void CreateThumbnailFromFileAsync(FileState* ds, EngineBase* engine);
+
+void CreateThumbnailForFile(MainWindow* win, FileState* ds);
+void DeleteCurrentFileAndOpenNext(MainWindow* win);
+void OnMenuViewShowHideToolbar(MainWindow* win);
+void DeleteCachedFiles(MainWindow* win);
+void UndoRedoInTab(WindowTab* tab, bool redo);
+void UpdateSettings(const Flags& i);
+void CancelDrag(MainWindow* win);

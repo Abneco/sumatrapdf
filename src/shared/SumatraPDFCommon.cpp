@@ -15,6 +15,9 @@
 #include "base/SquareTreeParser.h"
 #include "base/UITask.h"
 #include "base/Win.h"
+#if !OS_WIN
+#include "base/Launch.h"
+#endif
 #include "base/Http.h"
 #include "base/Archive.h"
 #include "base/Timer.h"
@@ -1865,3 +1868,271 @@ bool SendOpenFilesToExistingInstance(HWND targetHwnd, StrVec& paths, u32 newWind
 }
 
 #endif // OS_WIN
+
+// Windows keeps a file type's perceived type in the registry; elsewhere
+// it comes from a short list of extensions
+static TempStr PerceivedTypeTemp(Str path) {
+    TempStr ext = path::GetExtTemp(path);
+#if OS_WIN
+    return ReadRegStrTemp(HKEY_CLASSES_ROOT, ext, StrL("PerceivedType"));
+#else
+    static SeqStrings audioExts = ".mp3\0.wav\0.ogg\0.oga\0.flac\0.m4a\0.aac\0.opus\0.wma\0.mid\0.midi\0";
+    static SeqStrings videoExts = ".mp4\0.m4v\0.mkv\0.webm\0.avi\0.mov\0.mpg\0.mpeg\0.wmv\0.ogv\0";
+    TempStr extLower = str::DupTemp(ext);
+    str::ToLowerInPlace(extLower);
+    if (SeqStrIndex(audioExts, extLower) >= 0) {
+        return str::DupTemp(StrL("audio"));
+    }
+    if (SeqStrIndex(videoExts, extLower) >= 0) {
+        return str::DupTemp(StrL("video"));
+    }
+    return {};
+#endif
+}
+
+// lets the shell open a file of any supported perceived type
+// in the default application for opening such files
+bool OpenFileExternally(Str path) {
+    if (!CanAccessDisk() || gPluginMode) {
+        return false;
+    }
+
+    // check if this file's perceived type is allowed
+    TempStr perceivedType = PerceivedTypeTemp(path);
+    // since we allow following hyperlinks, also allow opening local webpages
+    if (str::EndsWithI(path, StrL(".htm")) || str::EndsWithI(path, StrL(".html")) ||
+        str::EndsWithI(path, StrL(".xhtml"))) {
+        perceivedType = str::DupTemp(StrL("webpage"));
+    }
+    str::ToLowerInPlace(perceivedType);
+    if (gAllowedFileTypes.Contains(StrL("*"))) {
+        /* allow all file types (not recommended) */;
+    } else if (len(perceivedType) == 0 || !gAllowedFileTypes.Contains(perceivedType)) {
+        return false;
+    }
+
+    // TODO: only do this for trusted files (cf. IsUntrustedFile)?
+    return LaunchFileShell(path);
+}
+
+void CreateThumbnailForFile(MainWindow* win, FileState* ds) {
+    if (!ds || !ShouldSaveThumbnail(ds)) {
+        return;
+    }
+
+    // don't create thumbnails for password protected documents
+    // (unless we're also remembering the decryption key anyway)
+    if (win->IsDocLoaded()) {
+        auto* model = win->AsFixed();
+        if (model) {
+            auto* engine = model->GetEngine();
+            bool withPwd = engine->isPasswordProtected;
+            Str decrKey = engine->decryptionKey;
+            if (withPwd && len(decrKey) == 0) {
+                RemoveThumbnail(ds);
+                return;
+            }
+            // save decryption key to file history so the thumbnail thread can use it
+            if (decrKey && !str::Eq(ds->decryptionKey, decrKey)) {
+                str::ReplaceWithCopy(&ds->decryptionKey, decrKey);
+            }
+        }
+    }
+
+    // re-opening a PostScript or DVI file converts it again (seconds for a big
+    // one), so hand the thread a clone of the engine we already have
+    EngineBase* clone = nullptr;
+    DisplayModel* dm = win->IsDocLoaded() ? win->AsFixed() : nullptr;
+    EngineBase* engine = dm ? dm->GetEngine() : nullptr;
+    if (engine && (engine->kind == kindEnginePostScript || engine->kind == kindEngineDvi) &&
+        str::Eq(engine->FilePath(), ds->filePath)) {
+        clone = engine->Clone();
+    }
+
+    // otherwise use file-based async thumbnail creation; it's independent
+    // of the tab lifecycle so it works even if the tab is closed before
+    // the render completes
+    CreateThumbnailFromFileAsync(ds, clone);
+}
+
+void DeleteCurrentFileAndOpenNext(MainWindow* win) {
+    if (!CanAccessDisk() || !win->IsDocLoaded() || gPluginMode) {
+        return;
+    }
+    Str path = str::Dup(win->ctrl->GetFilePath());
+    // this happens e.g. for embedded documents and directories
+    if (len(path) == 0 || !file::Exists(path)) {
+        str::Free(path);
+        return;
+    }
+    OpenNextPrevFileInFolder(win, true, path);
+    str::Free(path);
+}
+
+void OnMenuViewShowHideToolbar(MainWindow* win) {
+    if (win->isFullScreen) {
+        int mode = FullscreenToolbarModeFromPrefs();
+        int next = kToolbarShow;
+        if (mode == kToolbarShow) {
+            next = kToolbarOverlay;
+        } else if (mode == kToolbarOverlay) {
+            next = kToolbarHide;
+        }
+        SetFullscreenToolbarMode(next);
+    } else if (win->IsCurrentTabAbout()) {
+        int mode = ToolbarModeFromPrefs();
+        SetToolbarMode(mode == kToolbarHide ? kToolbarShow : kToolbarHide);
+    } else {
+        int mode = ToolbarModeFromPrefs();
+        int next = kToolbarShow;
+        if (mode == kToolbarShow) {
+            next = kToolbarOverlay;
+        } else if (mode == kToolbarOverlay) {
+            next = kToolbarHide;
+        }
+        SetToolbarMode(next);
+    }
+    for (MainWindow* w : gWindows) {
+        ShowOrHideToolbar(w);
+        ToolbarModeApplied(w);
+    }
+}
+
+// Unconditionally delete all local copies of comic-book archives that were
+// cached under <data>/cbx-cache/ when opening them from a network drive.
+// Safe to call with no open document; open documents may still hold a lock
+// on a cache file so some deletes can fail (logged).
+void DeleteCachedFiles(MainWindow* win) {
+    int nDeleted = 0;
+    int nFailed = 0;
+    TempStr dataDir = GetSumatraDataDirTemp();
+    if (len(dataDir) > 0) {
+        TempStr cacheDir = path::JoinTemp(dataDir, StrL("cbx-cache"));
+        if (path::GetType(cacheDir) == path::Type::Dir) {
+            DirIter di{cacheDir};
+            di.includeFiles = true;
+            di.includeDirs = false;
+            for (DirIterEntry* de : di) {
+                TempStr sizeStr = str::FormatSizeShortTemp(de->size);
+                if (file::Delete(de->filePath)) {
+                    nDeleted++;
+                    logf("DeleteCachedFiles: deleted '%s' (%s)\n", de->filePath, sizeStr);
+                } else {
+                    nFailed++;
+                    logf("DeleteCachedFiles: failed to delete '%s' (%s)\n", de->filePath, sizeStr);
+                }
+            }
+            // remove the (now empty, or residual) cache directory itself
+            if (nFailed == 0) {
+                dir::RemoveAll(cacheDir);
+            }
+        }
+    }
+    logf("DeleteCachedFiles: deleted %d, failed %d\n", nDeleted, nFailed);
+    if (!win) {
+        return;
+    }
+    TempStr msg;
+    if (nDeleted == 0 && nFailed == 0) {
+        msg = fmt("%s", Tr("No cached comic book files."));
+    } else if (nFailed == 0) {
+        msg = fmt(Tr("Deleted %d cached comic book files.").s, nDeleted);
+    } else {
+        msg = fmt(Tr("Deleted %d cached comic book files, %d failed.").s, nDeleted, nFailed);
+    }
+    ShowTemporaryNotification(win, msg, kNotif5SecsTimeOut);
+}
+
+void UndoRedoInTab(WindowTab* tab, bool redo) {
+    if (!tab) {
+        return;
+    }
+    MainWindow* win = tab->win;
+    DisplayModel* dm = tab->AsFixed();
+    if (!win || !dm) {
+        return;
+    }
+    EngineBase* engine = dm->GetEngine();
+    if (!engine || !EngineSupportsAnnotations(engine)) {
+        return;
+    }
+    bool can = redo ? EngineMupdfCanRedo(engine) : EngineMupdfCanUndo(engine);
+    if (!can) {
+        UndoRedoUnavailable(win, redo);
+        return;
+    }
+
+    // an in-flight placement or drag would write to what we are about to undo
+    CancelAnnotationPlacement(win);
+    CancelDrag(win);
+    SetSelectedAnnotation(tab, nullptr);
+    if (gRenderCache) {
+        gRenderCache->AbortRendering(dm);
+    }
+
+    Vec<Annotation*> removed;
+    bool ok = redo ? EngineMupdfRedo(engine, removed) : EngineMupdfUndo(engine, removed);
+    for (Annotation* a : removed) {
+        DetachAnnotationFromUI(a);
+        DeleteAnnotation(a);
+    }
+    // the wrapper deletes above mark the document modified; the journal knows better
+    EngineMupdfRefreshModifiedState(engine);
+    DeleteOldSelectionInfo(win, true);
+    RefreshAnnotationLists(tab);
+    NotifyAnnotationsChanged(tab);
+    ToolbarUpdateStateForWindow(win, true);
+    MainWindowRerender(win, true);
+    if (!ok) {
+        ShowWarningNotification(win, redo ? Tr("Nothing to redo") : Tr("Nothing to undo"), kNotif5SecsTimeOut);
+    }
+}
+
+void UpdateSettings(const Flags& i) {
+    ApplyWindowPosFlag(i);
+    if (len(i.inverseSearchCmdLine) > 0) {
+        str::ReplaceWithCopy(&gSettings->inverseSearchCmdLine, i.inverseSearchCmdLine);
+        gSettings->enableTeXEnhancements = true;
+    }
+    if (i.invertColors) {
+        SetDocumentColorsFollowTheme(DocumentColorsFollowTheme::Smart);
+    }
+
+    Str arg;
+    Str param;
+    for (int n = 0; n < len(i.globalPrefArgs); n++) {
+        arg = i.globalPrefArgs[n];
+        if (str::EqI(arg, StrL("-esc-to-exit"))) {
+            gSettings->escToExit = true;
+        } else if (str::EqI(arg, StrL("-bgcolor")) || str::EqI(arg, StrL("-bg-color"))) {
+            // -bgcolor is for backwards compat (was used pre-1.3)
+            // -bg-color is for consistency
+            param = i.globalPrefArgs[++n];
+            ReplaceColor(gSettings->mainWindowBackground, param);
+        } else if (str::EqI(arg, StrL("-set-color-range"))) {
+            param = i.globalPrefArgs[++n];
+            ReplaceColor(gSettings->fixedPageUI.textColor, param);
+            param = i.globalPrefArgs[++n];
+            ReplaceColor(gSettings->fixedPageUI.backgroundColor, param);
+        } else if (str::EqI(arg, StrL("-fwdsearch-offset"))) {
+            param = i.globalPrefArgs[++n];
+            gSettings->forwardSearch.highlightOffset = ParseInt(param);
+            gSettings->enableTeXEnhancements = true;
+        } else if (str::EqI(arg, StrL("-fwdsearch-width"))) {
+            param = i.globalPrefArgs[++n];
+            gSettings->forwardSearch.highlightWidth = ParseInt(param);
+            gSettings->enableTeXEnhancements = true;
+        } else if (str::EqI(arg, StrL("-fwdsearch-color"))) {
+            param = i.globalPrefArgs[++n];
+            ReplaceColor(gSettings->forwardSearch.highlightColor, param);
+            gSettings->enableTeXEnhancements = true;
+        } else if (str::EqI(arg, StrL("-fwdsearch-permanent"))) {
+            param = i.globalPrefArgs[++n];
+            gSettings->forwardSearch.highlightPermanent = ParseInt(param);
+            gSettings->enableTeXEnhancements = true;
+        } else if (str::EqI(arg, StrL("-manga-mode"))) {
+            param = i.globalPrefArgs[++n];
+            gSettings->comicBookUI.cbxMangaMode = str::EqI(StrL("true"), param) || str::Eq(StrL("1"), param);
+        }
+    }
+}

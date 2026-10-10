@@ -117,7 +117,8 @@ bool OpenDocumentFromMemory(MainWindow* win, Str data, Str nameHint);
 // WM_COMMAND's WPARAM
 void ExecuteAnnotCreateCmd(MainWindow* win, int cmdId, bool isPlacementCommit, Point pt);
 // the whole page has to be rendered again (annotations changed)
-void MainWindowRerender(MainWindow* win);
+void MainWindowRerender(MainWindow* win, bool includeNonClientArea = false);
+void CancelDrag(MainWindow* win);
 void RerenderTabPage(WindowTab*, int pageNo);
 
 struct AnnotCreateArgs;
