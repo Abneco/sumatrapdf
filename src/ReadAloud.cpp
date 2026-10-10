@@ -56,73 +56,6 @@ void ReadAloudHighlightTimerStop(MainWindow* win) {
     KillTimer(win->hwndCanvas, kReadAloudHighlightTimerID);
 }
 
-void ReadAloudUpdateAutoScroll(MainWindow* win) {
-    if (!win || !TtsIsSpeaking()) {
-        return;
-    }
-
-    WindowTab* tab = GetReadAloudSourceTab();
-    if (!tab || tab->win != win || !tab->readAloudAutoScroll) {
-        return;
-    }
-
-    DisplayModel* dm = tab->AsFixed();
-    if (!dm) {
-        return;
-    }
-
-    // In non-continuous modes (single page, facing, book view) the spoken word
-    // can be on a page that isn't laid out, and scrolling cannot reach it, so
-    // turn to that page first. The scrolling below still runs: zoomed in, the
-    // word can be off screen on a page that is itself visible.
-    if (!IsContinuous(dm->GetDisplayMode())) {
-        int pageNo = 0;
-        int pageCount = 0;
-        if (ReadAloudGetProgressPage(tab, &pageNo, &pageCount) && !dm->PageVisible(pageNo)) {
-            win->readAloudScrollFromCode = true;
-            dm->GoToPage(pageNo, false);
-            win->readAloudScrollFromCode = false;
-        }
-    }
-
-    Rect wordRect;
-    if (!ReadAloudGetCurrentWordScreenRect(win, &wordRect)) {
-        return;
-    }
-
-    int margin = DpiScale(48);
-    if (ReadAloudIsWordRectFullyVisibleInViewport(win, wordRect, margin)) {
-        return;
-    }
-
-    Rect canvas = win->canvasRc;
-
-    int dx = 0;
-    int dy = 0;
-    if (wordRect.y < margin) {
-        dy = wordRect.y - margin;
-    } else if (wordRect.y + wordRect.dy > canvas.dy - margin) {
-        dy = wordRect.y + wordRect.dy - (canvas.dy - margin);
-    }
-    if (wordRect.x < margin) {
-        dx = wordRect.x - margin;
-    } else if (wordRect.x + wordRect.dx > canvas.dx - margin) {
-        dx = wordRect.x + wordRect.dx - (canvas.dx - margin);
-    }
-
-    if (dx == 0 && dy == 0) {
-        return;
-    }
-
-    int maxStep = std::max(canvas.dy / 4, DpiScale(120));
-    dx = ClampI(dx, -maxStep, maxStep);
-    dy = ClampI(dy, -maxStep, maxStep);
-
-    win->readAloudScrollFromCode = true;
-    win->MoveDocBy(dx, dy);
-    win->readAloudScrollFromCode = false;
-}
-
 void PaintReadAloudHighlight(MainWindow* win, Gfx* gfx) {
     if (!TtsIsSpeaking()) {
         gReadAloudPaintLogState = 0;
@@ -465,7 +398,7 @@ static void ReadAloudPlaybackBarOnWindowMoved(ReadAloudPlaybackBar* bar, MainWin
     bar->UpdateLayout();
 }
 
-static ReadAloudPlaybackBar* ReadAloudPlaybackBarEnsure(MainWindow* win) {
+ReadAloudPlaybackBar* ReadAloudPlaybackBarEnsure(MainWindow* win) {
     if (!win || !win->hwndCanvas) {
         return nullptr;
     }
@@ -627,33 +560,12 @@ TempStr ReadAloudPlaybackBarStateTemp(int* exitCodeOut) {
     return finish(0);
 }
 
-void ReadAloudPlaybackBarUpdateSession(WindowTab* tab) {
-    if (!tab) {
-        // no read-aloud source any more (callers pass GetReadAloudSourceTab()),
-        // so no bar should be up. Hiding also drops the tab each bar points at,
-        // which is about to be deleted on the tab-close path
-        for (MainWindow* win : gWindows) {
-            ReadAloudPlaybackBarHide(win);
-        }
-        return;
-    }
-    if (!tab->win || len(tab->readAloudText) == 0) {
-        ReadAloudPlaybackBarHide(tab->win);
-        return;
-    }
-
-    ReadAloudPlaybackBar* bar = ReadAloudPlaybackBarEnsure(tab->win);
-    if (!bar) {
-        return;
-    }
+void ReadAloudBarSetSession(ReadAloudPlaybackBar* bar, WindowTab* tab) {
     bar->SetSession(tab);
+}
 
-    // hide bars on other windows
-    for (MainWindow* win : gWindows) {
-        if (win != tab->win && win->readAloudPlaybackBar && HwndIsVisible(win->readAloudPlaybackBar->hwnd)) {
-            ReadAloudPlaybackBarHide(win);
-        }
-    }
+bool ReadAloudBarIsShown(MainWindow* win) {
+    return win->readAloudPlaybackBar && HwndIsVisible(win->readAloudPlaybackBar->hwnd);
 }
 
 // ---------------- 4. read-aloud session ----------------
@@ -701,34 +613,6 @@ void ReadAloudSetSpeed(float speed) {
             ReadAloudContinueInTab(tab);
         }
     }
-}
-
-// Voice selection menu
-static TempStr TtsLangIdToLocaleNameTemp(Str lang) {
-    if (len(lang) == 0) {
-        return str::DupTemp(StrL("unknown"));
-    }
-
-    // Windows.Media.SpeechSynthesis voices report a locale name like "en-US",
-    // SAPI voices a hex language id like "409"
-    if (str::ContainsChar(lang, '-')) {
-        return str::DupTemp(lang);
-    }
-
-    char* langZ = CStrTemp(lang);
-    char* end = nullptr;
-    unsigned long langId = strtoul(langZ, &end, 16);
-    if (end == langZ || langId == 0) {
-        return str::DupTemp(lang);
-    }
-
-    WCHAR localeName[LOCALE_NAME_MAX_LENGTH] = {};
-    int n = LCIDToLocaleName((LCID)langId, localeName, dimof(localeName), 0);
-    if (n <= 0) {
-        return str::DupTemp(lang);
-    }
-
-    return ToUtf8Temp(localeName);
 }
 
 static void BuildReadAloudVoiceMenuItems(HMENU voiceMenu) {
@@ -843,71 +727,15 @@ void RebuildReadAloudMenu(MainWindow* win, HMENU menu, bool includeCursorItem, b
     RemoveBadMenuSeparators(menu);
 }
 
-static void HandleReadAloudMenuSelection(MainWindow* win, UINT selected) {
-    if (!win || selected == 0) {
-        return;
+// The id of the voice at voiceIndex in the voice menu, empty if there is none.
+TempStr ReadAloudVoiceIdTemp(int voiceIndex) {
+    Vec<TtsVoiceInfo> voices = TtsGetVoices();
+    TempStr id;
+    if (voiceIndex >= 0 && voiceIndex < len(voices)) {
+        id = str::DupTemp(voices[voiceIndex].id);
     }
-
-    WindowTab* currTab = win->CurrentTab();
-
-    if (selected == CmdTtsMenuPauseReading) {
-        ReadAloudStopRememberPos();
-        ToolbarUpdateStateForWindow(win, true);
-    } else if (selected == CmdTtsMenuStopReading) {
-        ReadAloudPlaybackStop();
-    } else if (selected == CmdTtsMenuReadCurrentPage) {
-        if (currTab) {
-            if (TtsIsSpeaking()) {
-                TtsStop();
-            }
-            ReadAloudFromViewportTopInTab(currTab);
-        }
-    } else if (selected == CmdTtsMenuReadFromCursor) {
-        if (currTab && win->contextMenuPtValid) {
-            if (TtsIsSpeaking()) {
-                TtsStop();
-            }
-            ReadAloudFromCursorInTab(currTab, win->contextMenuPt);
-        }
-    } else if (selected == CmdTtsMenuContinueReading) {
-        if (TtsIsSpeaking()) {
-            TtsStop();
-        }
-        ReadAloudContinueInTab(currTab);
-    } else if (selected == CmdTtsMenuReadSelection) {
-        if (TtsIsSpeaking()) {
-            TtsStop();
-        }
-        ReadAloudSelectionInTab(currTab);
-    } else if (selected == CmdTtsVoiceDefault) {
-        if (TtsSetVoiceById(StrL(""))) {
-            ReadAloudSaveVoicePref(StrL(""));
-        }
-    } else if (selected >= CmdTtsVoiceFirst && selected <= CmdTtsVoiceLast) {
-        Vec<TtsVoiceInfo> voices = TtsGetVoices();
-        int voiceIndex = (int)(selected - CmdTtsVoiceFirst);
-        if (voiceIndex >= 0 && voiceIndex < len(voices)) {
-            if (TtsSetVoiceById(voices[voiceIndex].id)) {
-                ReadAloudSaveVoicePref(voices[voiceIndex].id);
-            }
-        }
-        TtsFreeVoices(voices);
-    } else if (selected >= CmdTtsSpeedFirst && selected <= CmdTtsSpeedLast) {
-        int speedIndex = (int)(selected - CmdTtsSpeedFirst);
-        if (speedIndex >= 0 && speedIndex < ReadAloudSpeedCount()) {
-            ReadAloudSetSpeed(ReadAloudSpeedAt(speedIndex));
-        }
-    }
-}
-
-bool HandleReadAloudMenuCommand(MainWindow* win, int cmdId) {
-    if (cmdId == CmdTtsVoiceDefault || (cmdId >= CmdTtsMenuReadCurrentPage && cmdId <= CmdTtsMenuStopReading) ||
-        (cmdId >= CmdTtsVoiceFirst && cmdId <= CmdTtsVoiceLast) ||
-        (cmdId >= CmdTtsSpeedFirst && cmdId <= CmdTtsSpeedLast)) {
-        HandleReadAloudMenuSelection(win, (UINT)cmdId);
-        return true;
-    }
-    return false;
+    TtsFreeVoices(voices);
+    return id;
 }
 
 // the menu shown by the dropdown arrow on the Read Aloud toolbar button
@@ -940,35 +768,4 @@ void ShowTtsVoiceMenu(MainWindow* win, Rect buttonScreen) {
         return;
     }
     HwndSendCommand(win->hwndFrame, (int)selected);
-}
-
-// handles kWmTtsEvent posted by the tts backend
-void ReadAloudOnTtsEvent(MainWindow* win) {
-    TtsProcessEvents();
-    ReadAloudAfterTtsEvents();
-
-    WindowTab* tab = gReadAloudSourceTab;
-
-    if (TtsIsSpeaking() && tab && tab->win) {
-        tab->win->RedrawCanvas();
-        // Tick, not UpdateSession: relayout rebuilds virt tops and
-        // clears pressed, so Pause/Stop/Speed mouse-up is lost (issue #6106)
-        dbgtts("event speaking pos=%d\n", TtsGetSpokenPosUtf8());
-        ReadAloudPlaybackBarTick(tab->win);
-    }
-
-    // also gets here for word boundary events while still speaking;
-    // only the end of speech needs handling
-    if (TtsIsSpeaking() || !tab) {
-        return;
-    }
-    dbgtts("event idle hasMore=%d chunkEnd=%d textLen=%d\n", (int)ReadAloudHasMoreChunks(tab), tab->readAloudChunkEnd,
-           tab->readAloudText.len);
-    if (ReadAloudHasMoreChunks(tab)) {
-        SpeakChunkResult res = ReadAloudSpeakChunk(tab, Tr("No text available to read aloud"));
-        if (res != SpeakChunkResult::Failed) {
-            return;
-        }
-    }
-    ReadAloudFinishSession(tab, win);
 }

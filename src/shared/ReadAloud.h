@@ -236,3 +236,10 @@ void ReadAloudShowNotif(WindowTab* tab, Str msg);
 
 // implemented by each app
 void ReadAloudSetSpeed(float speed);
+
+TempStr TtsLangIdToLocaleNameTemp(Str lang);
+void HandleReadAloudMenuSelection(MainWindow* win, int selected);
+ReadAloudPlaybackBar* ReadAloudPlaybackBarEnsure(MainWindow* win);
+void ReadAloudBarSetSession(ReadAloudPlaybackBar* bar, WindowTab* tab);
+bool ReadAloudBarIsShown(MainWindow* win);
+TempStr ReadAloudVoiceIdTemp(int voiceIndex);
