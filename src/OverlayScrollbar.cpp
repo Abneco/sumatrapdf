@@ -28,20 +28,13 @@ static constexpr int kMinThumbSize = 20;
 static constexpr u8 kAlphaThin = 180;
 static constexpr u8 kAlphaThick = 220;
 
-// Get the track rect in client coords of the scrollbar window
-static Rect GetTrackRect(OverlayScrollbar* sb) {
-    Rect rc = HwndClientRect(sb->hwnd);
-    int arrowSize = 0;
-    int gap = 0;
-    if (IsThick(sb)) {
-        arrowSize = IsVert(sb) ? rc.dx : rc.dy;
-        gap = DpiScale(2);
-    }
-    int total = arrowSize + gap;
-    if (IsVert(sb)) {
-        return {0, total, rc.dx, rc.dy - (2 * total)};
-    }
-    return {total, 0, rc.dx - (2 * total), rc.dy};
+// the names ng uses for these, so the code below is the same in both
+bool IsAlwaysThickMode(OverlayScrollbar* sb) {
+    return sb->mode == OverlayScrollbar::Mode::Thick;
+}
+
+Rect ClientRect(OverlayScrollbar* sb) {
+    return HwndClientRect(sb->hwnd);
 }
 
 // Calculate thumb rect within the track
@@ -69,24 +62,6 @@ static Rect GetThumbRect(OverlayScrollbar* sb) {
         return {track.x, track.y + thumbOffset, track.dx, thumbLen};
     }
     return {track.x + thumbOffset, track.y, thumbLen, track.dy};
-}
-
-static Rect GetArrowTopRect(OverlayScrollbar* sb) {
-    Rect rc = HwndClientRect(sb->hwnd);
-    int arrowSize = IsVert(sb) ? rc.dx : rc.dy;
-    if (IsVert(sb)) {
-        return {0, 0, rc.dx, arrowSize};
-    }
-    return {0, 0, arrowSize, rc.dy};
-}
-
-static Rect GetArrowBottomRect(OverlayScrollbar* sb) {
-    Rect rc = HwndClientRect(sb->hwnd);
-    int arrowSize = IsVert(sb) ? rc.dx : rc.dy;
-    if (IsVert(sb)) {
-        return {0, rc.dy - arrowSize, rc.dx, arrowSize};
-    }
-    return {rc.dx - arrowSize, 0, arrowSize, rc.dy};
 }
 
 static void SendScrollMsg(OverlayScrollbar* sb, UINT scrollMsg, WPARAM wp) {
@@ -378,7 +353,7 @@ static void MakeLayeredWindowTransparent(HWND hwnd) {
     UpdateLayeredWindow(hwnd, nullptr, nullptr, nullptr, nullptr, nullptr, 0, &blend, ULW_ALPHA);
 }
 
-static void SetState(OverlayScrollbar* sb, State newState) {
+void SetState(OverlayScrollbar* sb, State newState) {
     if (sb->state == newState) {
         return;
     }
@@ -403,29 +378,6 @@ static void SetState(OverlayScrollbar* sb, State newState) {
     if (newState == State::SmartThin) {
         SetTimer(sb->hwnd, OverlayScrollbar::kTimerAutoHide, sb->showAfterScrollMs, nullptr);
     }
-}
-
-static void ShowScrollbarWindow(OverlayScrollbar* sb, bool thick) {
-    // Don't revert to thin while user is dragging the thumb
-    if (sb->isDragging && !thick) {
-        return;
-    }
-    if (sb->mode == OverlayScrollbar::Mode::Thick) {
-        SetState(sb, State::AlwaysThick);
-    } else {
-        SetState(sb, thick ? State::SmartThick : State::SmartThin);
-    }
-}
-
-static void HideScrollbarWindow(OverlayScrollbar* sb) {
-    // Don't hide while user is dragging the thumb
-    if (sb->isDragging) {
-        return;
-    }
-    if (sb->mode == OverlayScrollbar::Mode::Thick) {
-        return; // never hide in Thick mode
-    }
-    SetState(sb, State::SmartInvisible);
 }
 
 // Restart the thin-bar auto-hide countdown (showAfterScrollMs). SetState only
@@ -861,7 +813,7 @@ void OverlayScrollbarNotifyScroll(OverlayScrollbar* sb) {
     if (!sb || !IsActive(sb) || sb->isDragging) {
         return;
     }
-    if (sb->mode == OverlayScrollbar::Mode::Thick) {
+    if (IsAlwaysThickMode(sb)) {
         return;
     }
     // Leave thick-from-proximity alone; only (re)show the thin indicator.

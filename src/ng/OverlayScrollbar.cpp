@@ -59,7 +59,7 @@ static bool IsLive(OverlayScrollbar* sb) {
 }
 
 // ng: the modes that never hide and never go thin
-static bool IsAlwaysThickMode(OverlayScrollbar* sb) {
+bool IsAlwaysThickMode(OverlayScrollbar* sb) {
     return sb->mode == OverlayScrollbar::Mode::Thick || sb->mode == OverlayScrollbar::Mode::Windows;
 }
 
@@ -71,24 +71,8 @@ int OverlayScrollbarWidth(OverlayScrollbar* sb) {
     return ScaledWidth(sb, IsThick(sb));
 }
 
-static Rect ClientRect(OverlayScrollbar* sb) {
+Rect ClientRect(OverlayScrollbar* sb) {
     return Rect(0, 0, sb->clientDx, sb->clientDy);
-}
-
-// Get the track rect in client coords of the scrollbar
-static Rect GetTrackRect(OverlayScrollbar* sb) {
-    Rect rc = ClientRect(sb);
-    int arrowSize = 0;
-    int gap = 0;
-    if (IsThick(sb)) {
-        arrowSize = IsVert(sb) ? rc.dx : rc.dy;
-        gap = DpiScale(2);
-    }
-    int total = arrowSize + gap;
-    if (IsVert(sb)) {
-        return {0, total, rc.dx, rc.dy - (2 * total)};
-    }
-    return {total, 0, rc.dx - (2 * total), rc.dy};
 }
 
 static int ThumbLen(OverlayScrollbar* sb, int trackLen) {
@@ -123,24 +107,6 @@ static Rect GetThumbRect(OverlayScrollbar* sb) {
     return {track.x + thumbOffset, track.y, thumbLen, track.dy};
 }
 
-static Rect GetArrowTopRect(OverlayScrollbar* sb) {
-    Rect rc = ClientRect(sb);
-    int arrowSize = IsVert(sb) ? rc.dx : rc.dy;
-    if (IsVert(sb)) {
-        return {0, 0, rc.dx, arrowSize};
-    }
-    return {0, 0, arrowSize, rc.dy};
-}
-
-static Rect GetArrowBottomRect(OverlayScrollbar* sb) {
-    Rect rc = ClientRect(sb);
-    int arrowSize = IsVert(sb) ? rc.dx : rc.dy;
-    if (IsVert(sb)) {
-        return {0, rc.dy - arrowSize, rc.dx, arrowSize};
-    }
-    return {rc.dx - arrowSize, 0, arrowSize, rc.dy};
-}
-
 static void SendScrollMsg(OverlayScrollbar* sb, ScrollMsg msg) {
     if (sb->onScroll) {
         sb->onScroll(sb->win, sb, msg);
@@ -154,7 +120,7 @@ static void PaintScrollbar(OverlayScrollbar* sb) {
     }
 }
 
-static void SetState(OverlayScrollbar* sb, State newState) {
+void SetState(OverlayScrollbar* sb, State newState) {
     if (sb->state == newState) {
         return;
     }
@@ -164,29 +130,6 @@ static void SetState(OverlayScrollbar* sb, State newState) {
     }
     sb->hideLeftMs = (newState == State::SmartThin) ? sb->showAfterScrollMs : 0;
     PaintScrollbar(sb);
-}
-
-static void ShowScrollbarWindow(OverlayScrollbar* sb, bool thick) {
-    // Don't revert to thin while user is dragging the thumb
-    if (sb->isDragging && !thick) {
-        return;
-    }
-    if (IsAlwaysThickMode(sb)) {
-        SetState(sb, State::AlwaysThick);
-    } else {
-        SetState(sb, thick ? State::SmartThick : State::SmartThin);
-    }
-}
-
-static void HideScrollbarWindow(OverlayScrollbar* sb) {
-    // Don't hide while user is dragging the thumb
-    if (sb->isDragging) {
-        return;
-    }
-    if (IsAlwaysThickMode(sb)) {
-        return; // never hide in Thick mode
-    }
-    SetState(sb, State::SmartInvisible);
 }
 
 void OverlayScrollbarHide(OverlayScrollbar* sb) {
