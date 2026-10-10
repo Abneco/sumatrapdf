@@ -64,41 +64,6 @@ constexpr int kTextPaddingRight = 6;
 
 // unicode chars: https://www.compart.com/en/unicode/U+25BC
 
-static ToolbarButtonInfo gPdfAnnotationButtons[] = {
-    {gIconAnnotHighlightBrush, CmdAnnotationHighlightBrush, TrN("Highlighter: select text to highlight it")},
-    {gIconAnnotInk, CmdCreateAnnotInk, TrN("Ink")},
-    {gIconAnnotHighlight, CmdCreateAnnotHighlight, TrN("Highlight Selection")},
-    {gIconAnnotUnderline, CmdCreateAnnotUnderline, TrN("Underline")},
-    {gIconAnnotSquiggly, CmdCreateAnnotSquiggly, TrN("Squiggly")},
-    {gIconAnnotStrikeOut, CmdCreateAnnotStrikeOut, TrN("Strike Out")},
-    {nullptr, 0, {}},
-    {gIconAnnotText, CmdCreateAnnotText, TrN("Text")},
-    {gIconAnnotFreeText, CmdCreateAnnotFreeText, TrN("Free Text")},
-    {nullptr, 0, {}},
-    {gIconAnnotLine, CmdCreateAnnotLine, TrN("Line")},
-    {gIconAnnotPolyLine, CmdCreateAnnotPolyLine, TrN("Polyline")},
-    {gIconAnnotSquare, CmdCreateAnnotSquare, TrN("Square")},
-    {gIconAnnotCircle, CmdCreateAnnotCircle, TrN("Circle")},
-    {gIconAnnotPolygon, CmdCreateAnnotPolygon, TrN("Polygon")},
-    {nullptr, 0, {}},
-    {gIconAnnotRedact, CmdCreateAnnotRedact, TrN("Redact")},
-    {gIconApplyRedactions, CmdApplyRedactions, TrN("Apply Redactions")},
-    {gIconAnnotStamp, CmdCreateAnnotStamp, TrN("Stamp")},
-    {gIconAnnotCaret, CmdCreateAnnotCaret, TrN("Caret")},
-    {gIconAnnotFileAttachment, CmdCreateAnnotFileAttachment, TrN("File Attachment")},
-    {nullptr, 0, {}},
-    {gIconUndo, CmdUndo, TrN("Undo")},
-    {gIconRedo, CmdRedo, TrN("Redo")},
-    {nullptr, 0, {}},
-    {gIconFindAnnotation, CmdFindAnnotation, TrN("Find Annotation")},
-    {nullptr, 0, {}},
-    // the tooltip names the file, see ToolbarUpdateStateForWindow. Hovering it
-    // opens a drop-down with the other two ways to end an editing session
-    {gIconSave, CmdSaveAnnotations, TrN("Save changes to existing PDF")},
-};
-
-constexpr int kPdfAnnotationButtonsCount = dimof(gPdfAnnotationButtons);
-
 static VirtHost* ToolbarHost(MainWindow* win) {
     ToolbarVirt* tb = win ? win->toolbarVirt : nullptr;
     return tb ? tb->host : nullptr;
@@ -2876,7 +2841,8 @@ static void BuildToolbarLayout(MainWindow* win) {
     annotationBox->alignMain = MainAxisAlign::MainCenter;
     annotationBox->alignCross = CrossAxisAlign::CrossCenter;
     annotationBox->rtl = box->rtl;
-    for (const ToolbarButtonInfo& bi : gPdfAnnotationButtons) {
+    for (int pi = 0; pi < kPdfAnnotationButtonsCount; pi++) {
+        const ToolbarButtonInfo& bi = gPdfAnnotationButtons[pi];
         VirtCtrl* w = nullptr;
         if (!HasToolbarButtonContent(bi)) {
             w = MakeToolbarSeparator(tb->rowDy);

@@ -62,41 +62,6 @@ constexpr int kButtonSpacingX = 4;
 // distance between label and edit field
 constexpr int kTextPaddingRight = 6;
 
-// orig's gPdfAnnotationButtons: the "Edit PDF" row under the toolbar
-static ToolbarButtonInfo gPdfAnnotationButtons[] = {
-    {gIconAnnotHighlightBrush, CmdAnnotationHighlightBrush, TrN("Highlighter: select text to highlight it")},
-    {gIconAnnotInk, CmdCreateAnnotInk, TrN("Ink")},
-    {gIconAnnotHighlight, CmdCreateAnnotHighlight, TrN("Highlight Selection")},
-    {gIconAnnotUnderline, CmdCreateAnnotUnderline, TrN("Underline")},
-    {gIconAnnotSquiggly, CmdCreateAnnotSquiggly, TrN("Squiggly")},
-    {gIconAnnotStrikeOut, CmdCreateAnnotStrikeOut, TrN("Strike Out")},
-    {nullptr, 0, {}},
-    {gIconAnnotText, CmdCreateAnnotText, TrN("Text")},
-    {gIconAnnotFreeText, CmdCreateAnnotFreeText, TrN("Free Text")},
-    {nullptr, 0, {}},
-    {gIconAnnotLine, CmdCreateAnnotLine, TrN("Line")},
-    {gIconAnnotPolyLine, CmdCreateAnnotPolyLine, TrN("Polyline")},
-    {gIconAnnotSquare, CmdCreateAnnotSquare, TrN("Square")},
-    {gIconAnnotCircle, CmdCreateAnnotCircle, TrN("Circle")},
-    {gIconAnnotPolygon, CmdCreateAnnotPolygon, TrN("Polygon")},
-    {nullptr, 0, {}},
-    {gIconAnnotRedact, CmdCreateAnnotRedact, TrN("Redact")},
-    {gIconApplyRedactions, CmdApplyRedactions, TrN("Apply Redactions")},
-    {gIconAnnotStamp, CmdCreateAnnotStamp, TrN("Stamp")},
-    {gIconAnnotCaret, CmdCreateAnnotCaret, TrN("Caret")},
-    {gIconAnnotFileAttachment, CmdCreateAnnotFileAttachment, TrN("File Attachment")},
-    {nullptr, 0, {}},
-    {gIconUndo, CmdUndo, TrN("Undo")},
-    {gIconRedo, CmdRedo, TrN("Redo")},
-    {nullptr, 0, {}},
-    {gIconFindAnnotation, CmdFindAnnotation, TrN("Find Annotation")},
-    {nullptr, 0, {}},
-    // the tooltip names the file, see ToolbarBuild
-    {gIconSave, CmdSaveAnnotations, TrN("Save changes to existing PDF")},
-};
-
-constexpr int kPdfAnnotationButtonsCount = dimof(gPdfAnnotationButtons);
-
 // --- colors -----------------------------------------------------------------
 
 // --- sizes ------------------------------------------------------------------
@@ -1079,7 +1044,8 @@ constexpr int kAnnotSwatchPad = 5;
 // what the button is, as its tooltip says, since the drop-down takes the
 // tooltip's place
 static Str AnnotButtonTitle(int cmdId) {
-    for (const ToolbarButtonInfo& bi : gPdfAnnotationButtons) {
+    for (int pi = 0; pi < kPdfAnnotationButtonsCount; pi++) {
+        const ToolbarButtonInfo& bi = gPdfAnnotationButtons[pi];
         if (bi.cmdId == cmdId && len(bi.toolTip) > 0) {
             return trans::GetTranslation(bi.toolTip);
         }
@@ -1859,7 +1825,8 @@ void ToolbarView::OnButtonHover(ToolbarView* self, gp::Ctx* cx, const gp::HoverE
         break;
     }
     if (len(tip) == 0) {
-        for (const ToolbarButtonInfo& bi : gPdfAnnotationButtons) {
+        for (int pi = 0; pi < kPdfAnnotationButtonsCount; pi++) {
+            const ToolbarButtonInfo& bi = gPdfAnnotationButtons[pi];
             if (bi.cmdId != cmdId || len(bi.toolTip) == 0) {
                 continue;
             }

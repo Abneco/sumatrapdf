@@ -58,3 +58,7 @@ void EnsureAnnotPresetColor(int cmdId, Color col);
 
 // implemented by each app
 void SetPdfAnnotationsToolbarEnabled(MainWindow* win, bool enabled);
+
+// the "Edit PDF" row under the toolbar
+extern ToolbarButtonInfo gPdfAnnotationButtons[];
+extern const int kPdfAnnotationButtonsCount;
