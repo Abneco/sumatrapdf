@@ -1278,4 +1278,67 @@ MenuDef menuDefContextFav[] = {
         0,
     },
 };
+
+//[ ACCESSKEY_GROUP Context Menu (Create annot under cursor)
+MenuDef menuDefCreateAnnotUnderCursor[] = {
+    {
+        TrN("&Text"),
+        CmdCreateAnnotText,
+    },
+    {
+        TrN("&Free Text"),
+        CmdCreateAnnotFreeText,
+    },
+    {
+        TrN("&Highlighter"),
+        CmdAnnotationHighlightBrush,
+    },
+    {
+        TrN("&Stamp"),
+        CmdCreateAnnotStamp,
+    },
+    {
+        TrN("&Image From Clipboard"),
+        CmdCreateAnnotImageFromClipboard,
+    },
+    {
+        TrN("Image From Fi&le..."),
+        CmdInsertImage,
+    },
+    {
+        TrN("Si&gn With Image"),
+        CmdSignWithImage,
+    },
+    {
+        TrN("&Caret"),
+        CmdCreateAnnotCaret,
+    },
+    {
+        TrN("Line"),
+        CmdCreateAnnotLine,
+    },
+    {
+        TrN("Square"),
+        CmdCreateAnnotSquare,
+    },
+    {
+        TrN("Circle"),
+        CmdCreateAnnotCircle,
+    },
+    //{
+    //    TrN("Polygon"),
+    //    CmdCreateAnnotPolygon,
+    //},
+    //{
+    //    TrN("Polyline"),
+    //    CmdCreateAnnotPolyLine,
+    //},
+    //{ TrN("Ink"), CmdCreateAnnotInk, },
+    //{ TrN("File Attachment"), CmdCreateAnnotFileAttachment, },
+    {
+        {},
+        0,
+    },
+};
+//] ACCESSKEY_GROUP Context Menu (Create annot under cursor)
 // clang-format on

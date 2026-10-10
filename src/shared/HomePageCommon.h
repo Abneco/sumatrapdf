@@ -13,3 +13,4 @@ void PickRandomTipOrPromo();
 void PickAnotherRandomTip();
 TempStr TrimGitTemp(Str s);
 int CountHomePageFiles();
+extern Str sumatraTips;

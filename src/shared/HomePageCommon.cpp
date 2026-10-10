@@ -115,3 +115,30 @@ int CountHomePageFiles() {
     }
     return n;
 }
+
+// one tip per line; cmd/trans-dl.ts extracts each line for translation
+Str sumatraTips = StrL(R"tips(You can [customize scrollbar](CmdChangeScrollbar).
+You can [customize keyboard shortcuts](Help/Customize-keyboard-shortcuts).
+You can [customize toolbar](Help/Customize-toolbar).
+Press (Kbd/(Key/CmdCommandPalette)) to open [command palette](CmdCommandPalette).
+To open file from history open [command palette](CmdCommandPalette) with (Kbd/(Key/CmdCommandPalette)) and type (Kbd/#).
+You can [extract text from PDF file](Help/Tool-x-extract-text-from-pdf).
+You can [toggle menu bar](CmdToggleMenuBar) with (Kbd/(Key/CmdToggleMenuBar)).
+You can [toggle toolbar](CmdToggleToolbar) with (Kbd/(Key/CmdToggleToolbar)).
+You can [edit PDF annotations](Help/Editing-annotations).
+You can enable [citation preview on hover](Help/Citation-hover-preview).
+You can [have documents read aloud](Help/Read-Aloud).
+You can [sign a PDF](Help/Sign-a-PDF).
+You can [fill PDF forms](Help/Fill-PDF-forms).
+You can [merge PDFs](Help/Merge-PDFs) and [reorder pages](Help/Reorder-PDF-pages).
+You can [split a PDF](Help/Split-a-PDF).
+You can [redact a PDF](Help/Redact-a-PDF).
+You can [present a PDF](Help/Present-a-PDF) full screen.
+You can [use SumatraPDF with LaTeX](Help/LaTeX-integration) for forward and inverse search.
+You can [read comics and manga](Help/Comics-and-manga) right to left.
+You can [bookmark pages as favorites](Help/Managing-favorites).
+You can [chat with AI about a document](Help/AI-Chat-with-document).
+You can [customize theme colors](Help/Customize-theme-colors).
+You can [save a page region as an image](Help/Save-page-region-as-image).
+You can [print selected pages](Help/Print-selected-pages).
+)tips");

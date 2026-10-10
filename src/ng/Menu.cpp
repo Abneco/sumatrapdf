@@ -113,59 +113,6 @@ static MenuDef menuDefSelection[] = {
 };
 //] ACCESSKEY_GROUP Context Menu (Selection)
 
-//[ ACCESSKEY_GROUP Context Menu (Create annot under cursor)
-MenuDef menuDefCreateAnnotUnderCursor[] = {
-    {
-        TrN("&Text"),
-        CmdCreateAnnotText,
-    },
-    {
-        TrN("&Free Text"),
-        CmdCreateAnnotFreeText,
-    },
-    {
-        TrN("&Highlighter"),
-        CmdAnnotationHighlightBrush,
-    },
-    {
-        TrN("&Stamp"),
-        CmdCreateAnnotStamp,
-    },
-    {
-        TrN("&Image From Clipboard"),
-        CmdCreateAnnotImageFromClipboard,
-    },
-    {
-        TrN("Image From Fi&le..."),
-        CmdInsertImage,
-    },
-    {
-        TrN("Si&gn With Image"),
-        CmdSignWithImage,
-    },
-    {
-        TrN("&Caret"),
-        CmdCreateAnnotCaret,
-    },
-    {
-        TrN("Line"),
-        CmdCreateAnnotLine,
-    },
-    {
-        TrN("Square"),
-        CmdCreateAnnotSquare,
-    },
-    {
-        TrN("Circle"),
-        CmdCreateAnnotCircle,
-    },
-    {
-        {},
-        0,
-    },
-};
-//] ACCESSKEY_GROUP Context Menu (Create annot under cursor)
-
 //[ ACCESSKEY_GROUP Context Menu (Main)
 static MenuDef menuDefContext[] = {
     {

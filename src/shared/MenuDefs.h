@@ -34,6 +34,4 @@ extern MenuDef menuDefContextStart[];
 extern MenuDef menuDefContextTab[];
 extern MenuDef menuDefContextToc[];
 extern MenuDef menuDefContextFav[];
-
-// defined by each app
 extern MenuDef menuDefCreateAnnotUnderCursor[];

@@ -36,3 +36,49 @@ TempStr DefaultDestinationLanguageTemp();
 
 // implemented by each app
 TempStr OsDefaultDestinationLanguageTemp();
+
+static const Str gPopularLanguages[] = {
+    StrL("English"),
+    StrL("Chinese (Simplified)"),
+    StrL("Chinese (Traditional)"),
+    StrL("Spanish"),
+    StrL("Arabic"),
+    StrL("Hindi"),
+    StrL("Portuguese"),
+    StrL("Bengali"),
+    StrL("Russian"),
+    StrL("Japanese"),
+    StrL("Punjabi"),
+    StrL("German"),
+    StrL("French"),
+    StrL("Korean"),
+    StrL("Turkish"),
+    StrL("Vietnamese"),
+    StrL("Italian"),
+    StrL("Polish"),
+    StrL("Ukrainian"),
+    StrL("Dutch"),
+    StrL("Thai"),
+    StrL("Indonesian"),
+    StrL("Czech"),
+    StrL("Swedish"),
+    StrL("Romanian"),
+    StrL("Greek"),
+    StrL("Hebrew"),
+    StrL("Danish"),
+    StrL("Finnish"),
+    StrL("Norwegian"),
+    StrL("Hungarian"),
+    StrL("Slovak"),
+};
+
+#if OS_WIN
+// Parallel LANG_* ids and English names; keep in the same order.
+static const WORD gPrimaryLangIds[] = {
+    LANG_ENGLISH,    LANG_CHINESE,    LANG_GERMAN,    LANG_FRENCH,    LANG_SPANISH, LANG_ITALIAN,
+    LANG_PORTUGUESE, LANG_RUSSIAN,    LANG_JAPANESE,  LANG_KOREAN,    LANG_ARABIC,  LANG_HINDI,
+    LANG_TURKISH,    LANG_VIETNAMESE, LANG_POLISH,    LANG_UKRAINIAN, LANG_DUTCH,   LANG_THAI,
+    LANG_INDONESIAN, LANG_CZECH,      LANG_SWEDISH,   LANG_ROMANIAN,  LANG_GREEK,   LANG_HEBREW,
+    LANG_DANISH,     LANG_FINNISH,    LANG_NORWEGIAN, LANG_HUNGARIAN, LANG_SLOVAK,  LANG_BENGALI,
+};
+#endif
