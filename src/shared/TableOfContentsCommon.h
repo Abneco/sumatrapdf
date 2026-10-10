@@ -53,3 +53,6 @@ void AddFavoriteFromToc(MainWindow* win, TocItem* dti);
 void AutoExpandTopLevelItems(TocItem* root);
 TocItem* FindTocItemByTitleAndPage(TocItem* item, Str title, int pageNo);
 TocItem* FilterTocItemRec(TocItem* item, const StrVec& words);
+
+// implemented by each app
+void GoToTocLink(GoToTocLinkData* d);

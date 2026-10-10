@@ -122,3 +122,23 @@ void AppendHomeDirEntry(Vec<NavFileEntry>& out, Str path) {
     e.name = hasSep ? str::Dup(path) : str::Join(path, StrL("\\"));
     VecAppend(out, e);
 }
+
+static StrVec gQuickAccessDirs;
+
+static StrVec gQuickAccessFiles;
+
+void GetQuickAccessCached(StrVec& dirsOut, StrVec& filesOut) {
+    gQuickAccessMutex.Lock();
+    if (!gQuickAccessCached) {
+        gQuickAccessDirs.Reset();
+        gQuickAccessFiles.Reset();
+        auto t = TimeGet();
+        ListShellQuickAccess(gQuickAccessDirs, gQuickAccessFiles);
+        logf("NavDirScan: quick access %d dirs, %d files in %.1fms\n", len(gQuickAccessDirs), len(gQuickAccessFiles),
+             TimeSinceInMs(t));
+        gQuickAccessCached = true;
+    }
+    dirsOut = gQuickAccessDirs;
+    filesOut = gQuickAccessFiles;
+    gQuickAccessMutex.Unlock();
+}

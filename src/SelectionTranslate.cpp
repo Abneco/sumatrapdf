@@ -243,7 +243,7 @@ static Str PrimaryLangIdToEnglishName(WORD primary) {
     return {};
 }
 
-static TempStr OsDefaultDestinationLanguageTemp() {
+TempStr OsDefaultDestinationLanguageTemp() {
     LANGID langId = GetUserDefaultUILanguage();
     Str name = PrimaryLangIdToEnglishName(PRIMARYLANGID(langId));
     if (name) {
@@ -253,13 +253,6 @@ static TempStr OsDefaultDestinationLanguageTemp() {
         return StrL("Chinese (Traditional)");
     }
     return StrL("English");
-}
-
-static TempStr DefaultDestinationLanguageTemp() {
-    if (gSettings && !str::IsEmptyOrWhiteSpace(gSettings->translateToLang)) {
-        return gSettings->translateToLang;
-    }
-    return OsDefaultDestinationLanguageTemp();
 }
 
 static void LogTranslation(AIChatBackend backend, Str direction, Str text) {

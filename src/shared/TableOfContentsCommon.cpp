@@ -439,3 +439,19 @@ TocItem* FilterTocItemRec(TocItem* item, const StrVec& words) {
     }
     return resultFirst;
 }
+
+// navigate to a TocItem regardless of whether it points to a page in this
+// document or to an external destination (used by the command palette, where
+// the user explicitly picked the item so we always honor it)
+// navigate to a TocItem (used by the command palette's TOC mode)
+void GoToTocItem(MainWindow* win, TocItem* tocItem) {
+    if (!win || !tocItem) {
+        return;
+    }
+    auto* data = NewGoToTocLinkData(win, tocItem, true);
+    if (!data) {
+        return;
+    }
+    auto fn = MkFunc0<GoToTocLinkData>(GoToTocLink, data);
+    uitask::Post(fn, "TaskGoToTocFromPalette");
+}

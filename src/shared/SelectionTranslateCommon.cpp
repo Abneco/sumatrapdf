@@ -551,3 +551,10 @@ TempStr BuildTranslateUrlTemp(TranslateEngine engine, Str srcLang, Str dstLang, 
     }
     return fmt("https://translate.google.com/?op=translate&sl=%s&tl=%s&text=%s", src, dst, enc);
 }
+
+TempStr DefaultDestinationLanguageTemp() {
+    if (gSettings && !str::IsEmptyOrWhiteSpace(gSettings->translateToLang)) {
+        return gSettings->translateToLang;
+    }
+    return OsDefaultDestinationLanguageTemp();
+}

@@ -31,3 +31,8 @@ bool IsEngineAvailable(TranslateEngine engine);
 TranslateEngine EngineFromName(Str name);
 TranslateEngine ResolveEngine(TranslateEngine engine);
 TempStr BuildTranslateUrlTemp(TranslateEngine engine, Str srcLang, Str dstLang, Str text);
+
+TempStr DefaultDestinationLanguageTemp();
+
+// implemented by each app
+TempStr OsDefaultDestinationLanguageTemp();

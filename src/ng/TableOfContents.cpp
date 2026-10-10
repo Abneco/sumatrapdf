@@ -47,7 +47,7 @@
 // (while tab->ctrl still matches), which caused UAF in HandleLink
 // (crash 8bfe7adb1000001: EngineMupdf::HandleLink / dest->GetKind).
 
-static void GoToTocLink(GoToTocLinkData* d) {
+void GoToTocLink(GoToTocLinkData* d) {
     AutoDelete delData(d);
 
     auto* tab = d->tab;
@@ -88,21 +88,6 @@ static void GoToTocLink(GoToTocLinkData* d) {
         }
     }
     AppShellInvalidate(win);
-}
-
-// navigate to a TocItem regardless of whether it points to a page in this
-// document or to an external destination (used by the command palette, where
-// the user explicitly picked the item so we always honor it)
-void GoToTocItem(MainWindow* win, TocItem* tocItem) {
-    if (!win || !tocItem) {
-        return;
-    }
-    auto* data = NewGoToTocLinkData(win, tocItem, true);
-    if (!data) {
-        return;
-    }
-    auto fn = MkFunc0<GoToTocLinkData>(GoToTocLink, data);
-    uitask::Post(fn, "TaskGoToTocFromPalette");
 }
 
 static void GoToTocTreeItem(MainWindow* win, TocItem* tocItem, bool allowExternal) {

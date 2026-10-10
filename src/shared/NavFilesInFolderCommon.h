@@ -10,3 +10,8 @@ TempStr NavLeafNameTemp(DirIterEntry* de);
 extern Mutex gQuickAccessMutex;
 extern bool gQuickAccessCached;
 void AppendHomeDirEntry(Vec<NavFileEntry>& out, Str path);
+
+void GetQuickAccessCached(StrVec& dirsOut, StrVec& filesOut);
+
+// base/Win.cpp on Windows, a stub in ng elsewhere
+bool ListShellQuickAccess(StrVec& dirsOut, StrVec& filesOut);

@@ -172,7 +172,7 @@ static const char* gLangCodeToName =
     "da\0Danish\0fi\0Finnish\0no\0Norwegian\0hu\0Hungarian\0sk\0Slovak\0bn\0Bengali\0";
 #endif
 
-static TempStr OsDefaultDestinationLanguageTemp() {
+TempStr OsDefaultDestinationLanguageTemp() {
 #if OS_WIN
     LANGID langId = GetUserDefaultUILanguage();
     Str name = PrimaryLangIdToEnglishName(PRIMARYLANGID(langId));
@@ -190,13 +190,6 @@ static TempStr OsDefaultDestinationLanguageTemp() {
     }
 #endif
     return StrL("English");
-}
-
-static TempStr DefaultDestinationLanguageTemp() {
-    if (gSettings && !str::IsEmptyOrWhiteSpace(gSettings->translateToLang)) {
-        return gSettings->translateToLang;
-    }
-    return OsDefaultDestinationLanguageTemp();
 }
 
 static void LogTranslation(AIChatBackend backend, Str direction, Str text) {

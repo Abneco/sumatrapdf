@@ -228,25 +228,6 @@ static void ClearNavModel(ListBoxModelNav* m) {
     VecReset(m->entries);
 }
 
-static StrVec gQuickAccessDirs;
-static StrVec gQuickAccessFiles;
-
-static void GetQuickAccessCached(StrVec& dirsOut, StrVec& filesOut) {
-    gQuickAccessMutex.Lock();
-    if (!gQuickAccessCached) {
-        gQuickAccessDirs.Reset();
-        gQuickAccessFiles.Reset();
-        auto t = TimeGet();
-        ListShellQuickAccess(gQuickAccessDirs, gQuickAccessFiles);
-        logf("NavDirScan: quick access %d dirs, %d files in %.1fms\n", len(gQuickAccessDirs), len(gQuickAccessFiles),
-             TimeSinceInMs(t));
-        gQuickAccessCached = true;
-    }
-    dirsOut = gQuickAccessDirs;
-    filesOut = gQuickAccessFiles;
-    gQuickAccessMutex.Unlock();
-}
-
 static void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
     if (!CanOpenFile(path)) {
         return;
