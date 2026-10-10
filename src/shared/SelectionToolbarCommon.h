@@ -24,3 +24,9 @@ void InitButtons(Vec<SelectionToolbarButton>& buttons, MainWindow* win);
 
 // implemented by each app
 void AppendSelectionHandlerButtons(Vec<SelectionToolbarButton>& buttons, const AppCommandCtx& ctx);
+Vec<SelectionToolbarButton>* SelectionToolbarButtons(MainWindow* win);
+Rect SelectionCanvasRect(MainWindow* win, DisplayModel* dm);
+void InvokeSelectionToolbarCommand(MainWindow* win, int cmdId);
+
+Str ButtonLabel(const SelectionToolbarButton& b);
+bool GetSelectionBounds(MainWindow* win, Rect& out);

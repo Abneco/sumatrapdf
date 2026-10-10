@@ -153,3 +153,72 @@ void InitButtons(Vec<SelectionToolbarButton>& buttons, MainWindow* win) {
     AppendSelectionHandlerButtons(buttons, ctx);
     NormalizeSelectionToolbarSeparators(buttons);
 }
+
+Str ButtonLabel(const SelectionToolbarButton& b) {
+    return len(b.userLabel) > 0 ? b.userLabel : Tr(b.label);
+}
+
+// union of the on-screen parts of the selection, in canvas coordinates;
+// false if the selection is empty or fully scrolled out of view
+bool GetSelectionBounds(MainWindow* win, Rect& out) {
+    DisplayModel* dm = win->AsFixed();
+    if (!dm) {
+        return false;
+    }
+    WindowTab* tab = win->CurrentTab();
+    if (!tab || !tab->selectionOnPage) {
+        return false;
+    }
+    Rect canvas = SelectionCanvasRect(win, dm);
+    Rect bounds;
+    bool first = true;
+    for (SelectionOnPage& sel : *tab->selectionOnPage) {
+        Rect r = sel.GetRect(dm).Intersect(canvas);
+        if (r.IsEmpty()) {
+            continue;
+        }
+        if (first) {
+            bounds = r;
+            first = false;
+        } else {
+            bounds = bounds.Union(r);
+        }
+    }
+    if (first) {
+        return false;
+    }
+    out = bounds;
+    return true;
+}
+
+// Fire a selection-toolbar button the same way a click does, for -dbg-control tests.
+TempStr SelectionToolbarClickTemp(Str cmdName, int* exitCodeOut) {
+    str::Builder out;
+    auto finish = [&](Str msg, int code) -> TempStr {
+        out.Append(msg);
+        if (exitCodeOut) {
+            *exitCodeOut = code;
+        }
+        return ToStrTemp(out);
+    };
+    MainWindow* win = len(gWindows) > 0 ? gWindows[0] : nullptr;
+    if (!IsSelectionToolbarVisible(win)) {
+        return finish(StrL("ERROR toolbar-not-visible\n"), 1);
+    }
+    int cmdId = GetCommandIdByName(cmdName);
+    if (cmdId <= 0) {
+        return finish(fmt("ERROR unknown-cmd %s\n", cmdName), 1);
+    }
+    bool found = false;
+    for (const SelectionToolbarButton& b : *SelectionToolbarButtons(win)) {
+        if (b.cmdId == cmdId) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        return finish(fmt("ERROR no-button %s\n", cmdName), 1);
+    }
+    InvokeSelectionToolbarCommand(win, cmdId);
+    return finish(StrL("OK\n"), 0);
+}

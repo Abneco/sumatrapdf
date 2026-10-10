@@ -47,13 +47,6 @@ constexpr const WCHAR* kSelectionToolbarClassName = L"SumatraSelectionToolbar";
 static Kind kNotifCopiedToClipboard = "notifCopiedToClipboard";
 constexpr int kCopiedNotifTimeoutMs = 1500;
 
-static Str ButtonLabel(const SelectionToolbarButton& b) {
-    if (b.userLabel) {
-        return b.userLabel;
-    }
-    return Tr(b.label);
-}
-
 struct SelectionToolbar {
     MainWindow* win = nullptr;
     WindowTab* tab = nullptr; // tab the current selection belongs to
@@ -235,11 +228,11 @@ static bool GetSelectionEndPoint(MainWindow* win, Point& out);
 // The toolbar has done its job once an action is picked, so hide it until the
 // selection changes. Sticky-note placement records the selection end first,
 // because the command drops the selection.
-static void InvokeSelectionToolbarCommand(SelectionToolbar* tb, int cmdId) {
+void InvokeSelectionToolbarCommand(MainWindow* win, int cmdId) {
+    SelectionToolbar* tb = win ? win->selectionToolbar : nullptr;
     if (!tb || !cmdId) {
         return;
     }
-    MainWindow* win = tb->win;
     LPARAM commandPoint = 0;
     if (cmdId == CmdCreateAnnotText) {
         Point selectionEnd;
@@ -275,7 +268,7 @@ static void OnSelToolbarButtonClicked(SelectionToolbar* tb, VirtMouseEvent* ev) 
     if (!cmdId) {
         return;
     }
-    InvokeSelectionToolbarCommand(tb, cmdId);
+    InvokeSelectionToolbarCommand(tb->win, cmdId);
 }
 
 // Build the layout tree for the current buttons and measure it into tb->size
@@ -360,37 +353,14 @@ static void PaintToolbar(SelectionToolbar*, VirtHostPaintEvent* ev) {
     ev->gfx->FillRoundedRect(ev->clientRect, cornerRadius, SelBarBg(), SelBarBorderColor());
 }
 
-// union of the on-screen parts of the selection, in canvas coordinates;
-// false if the selection is empty or fully scrolled out of view
-static bool GetSelectionBounds(MainWindow* win, Rect& out) {
-    DisplayModel* dm = win->AsFixed();
-    if (!dm) {
-        return false;
-    }
-    WindowTab* tab = win->CurrentTab();
-    if (!tab || !tab->selectionOnPage) {
-        return false;
-    }
-    Rect canvas = win->canvasRc;
-    Rect bounds;
-    bool first = true;
-    for (SelectionOnPage& sel : *tab->selectionOnPage) {
-        Rect r = sel.GetRect(dm).Intersect(canvas);
-        if (r.IsEmpty()) {
-            continue;
-        }
-        if (first) {
-            bounds = r;
-            first = false;
-        } else {
-            bounds = bounds.Union(r);
-        }
-    }
-    if (first) {
-        return false;
-    }
-    out = bounds;
-    return true;
+bool IsSelectionToolbarVisible(MainWindow* win) {
+    SelectionToolbar* tb = win ? win->selectionToolbar : nullptr;
+    return tb && tb->host && tb->host->IsVisible();
+}
+
+// the part of the canvas a selection can show in
+Rect SelectionCanvasRect(MainWindow* win, DisplayModel*) {
+    return win->canvasRc;
 }
 
 // Prefer above the selection, fall back to below; clamp to the canvas.
@@ -509,39 +479,6 @@ TempStr SelectionToolbarLayoutDumpTemp() {
             fmt("button=%d cmd=%d kind=%s icon=%d,%d tooltip=%s\n", i, b.cmdId, kind, iconDx, iconDy, ButtonLabel(b)));
     }
     return ToStrTemp(out);
-}
-
-// Fire a selection-toolbar button the same way a click does, for -dbg-control tests.
-TempStr SelectionToolbarClickTemp(Str cmdName, int* exitCodeOut) {
-    str::Builder out;
-    auto finish = [&](Str msg, int code) -> TempStr {
-        out.Append(msg);
-        if (exitCodeOut) {
-            *exitCodeOut = code;
-        }
-        return ToStrTemp(out);
-    };
-    MainWindow* win = len(gWindows) > 0 ? gWindows[0] : nullptr;
-    SelectionToolbar* tb = win ? win->selectionToolbar : nullptr;
-    if (!tb || !tb->host || !tb->host->IsVisible()) {
-        return finish(StrL("ERROR toolbar-not-visible\n"), 1);
-    }
-    int cmdId = GetCommandIdByName(cmdName);
-    if (cmdId <= 0) {
-        return finish(fmt("ERROR unknown-cmd %s\n", cmdName), 1);
-    }
-    bool found = false;
-    for (const SelectionToolbarButton& b : tb->buttons) {
-        if (b.cmdId == cmdId) {
-            found = true;
-            break;
-        }
-    }
-    if (!found) {
-        return finish(fmt("ERROR no-button %s\n", cmdName), 1);
-    }
-    InvokeSelectionToolbarCommand(tb, cmdId);
-    return finish(StrL("OK\n"), 0);
 }
 
 // Show the floating selection toolbar for the current text selection. Does
@@ -761,4 +698,8 @@ void ResetSelectionToolbarDismissed(MainWindow* win) {
     if (win && win->selectionToolbar) {
         win->selectionToolbar->dismissed = false;
     }
+}
+
+Vec<SelectionToolbarButton>* SelectionToolbarButtons(MainWindow* win) {
+    return &win->selectionToolbar->buttons;
 }

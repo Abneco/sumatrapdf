@@ -58,11 +58,6 @@ struct SelectionToolbar {
     gp::Bounds measured;
 };
 
-// a selection handler shows its own label; a built-in one the translated one
-static Str ButtonLabel(const SelectionToolbarButton& b) {
-    return len(b.userLabel) > 0 ? b.userLabel : Tr(b.label);
-}
-
 // selection handlers that asked for a button with SelectToolbarNameOrSvg
 void AppendSelectionHandlerButtons(Vec<SelectionToolbarButton>& buttons, const AppCommandCtx& ctx) {
     Vec<CustomCommand*> cmds;
@@ -101,37 +96,9 @@ static SelectionToolbar* GetOrCreateToolbar(MainWindow* win) {
     return win->selectionToolbar;
 }
 
-// union of the on-screen parts of the selection, in canvas coordinates;
-// false if the selection is empty or fully scrolled out of view
-static bool GetSelectionBounds(MainWindow* win, Rect& out) {
-    DisplayModel* dm = win->AsFixed();
-    if (!dm) {
-        return false;
-    }
-    WindowTab* tab = win->CurrentTab();
-    if (!tab || !tab->selectionOnPage) {
-        return false;
-    }
-    Rect canvas(Point(), dm->GetViewPort().Size());
-    Rect bounds;
-    bool first = true;
-    for (SelectionOnPage& sel : *tab->selectionOnPage) {
-        Rect r = sel.GetRect(dm).Intersect(canvas);
-        if (r.IsEmpty()) {
-            continue;
-        }
-        if (first) {
-            bounds = r;
-            first = false;
-        } else {
-            bounds = bounds.Union(r);
-        }
-    }
-    if (first) {
-        return false;
-    }
-    out = bounds;
-    return true;
+// the part of the canvas a selection can show in
+Rect SelectionCanvasRect(MainWindow*, DisplayModel* dm) {
+    return Rect(Point(), dm->GetViewPort().Size());
 }
 
 bool IsSelectionToolbarVisible(MainWindow* win) {
@@ -277,7 +244,7 @@ void DeleteSelectionToolbar(MainWindow* win) {
 
 // The toolbar has done its job once an action is picked, so hide it until the
 // selection changes.
-static void InvokeSelectionToolbarCommand(MainWindow* win, int cmdId) {
+void InvokeSelectionToolbarCommand(MainWindow* win, int cmdId) {
     SelectionToolbar* tb = win ? win->selectionToolbar : nullptr;
     if (!tb || !cmdId) {
         return;
@@ -461,41 +428,13 @@ TempStr SelectionToolbarLayoutDumpTemp() {
     return SelectionToolbarLayoutDumpTemp(win);
 }
 
-TempStr SelectionToolbarClickTemp(Str cmdName, int* exitCodeOut) {
-    str::Builder out;
-    auto finish = [&](Str msg, int code) -> TempStr {
-        out.Append(msg);
-        if (exitCodeOut) {
-            *exitCodeOut = code;
-        }
-        return ToStrTemp(out);
-    };
-    MainWindow* win = len(gWindows) > 0 ? gWindows[0] : nullptr;
-    SelectionToolbar* tb = win ? win->selectionToolbar : nullptr;
-    if (!IsSelectionToolbarVisible(win) || !tb) {
-        return finish(StrL("ERROR toolbar-not-visible\n"), 1);
-    }
-    int cmdId = GetCommandIdByName(cmdName);
-    if (cmdId <= 0) {
-        return finish(fmt("ERROR unknown-cmd %s\n", cmdName), 1);
-    }
-    bool found = false;
-    for (const SelectionToolbarButton& b : tb->buttons) {
-        if (b.cmdId == cmdId) {
-            found = true;
-            break;
-        }
-    }
-    if (!found) {
-        return finish(fmt("ERROR no-button %s\n", cmdName), 1);
-    }
-    InvokeSelectionToolbarCommand(win, cmdId);
-    return finish(StrL("OK\n"), 0);
-}
-
 // The selection changed or went away: a new one gets the toolbar again.
 void ResetSelectionToolbarDismissed(MainWindow* win) {
     if (win && win->selectionToolbar) {
         win->selectionToolbar->dismissed = false;
     }
+}
+
+Vec<SelectionToolbarButton>* SelectionToolbarButtons(MainWindow* win) {
+    return &win->selectionToolbar->buttons;
 }
