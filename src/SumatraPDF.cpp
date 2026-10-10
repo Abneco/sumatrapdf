@@ -8156,20 +8156,6 @@ void ExitFullScreen(MainWindow* win) {
     EndFrameRedrawSuppression(win);
 }
 
-void ToggleFullScreen(MainWindow* win, bool presentation) {
-    bool enterFullScreen = presentation ? !win->presentation : !win->isFullScreen;
-
-    if (win->presentation || win->isFullScreen) {
-        ExitFullScreen(win);
-    } else {
-        RememberDefaultWindowPosition(win);
-    }
-
-    if (enterFullScreen && (!presentation || win->IsDocLoaded())) {
-        EnterFullScreen(win, presentation);
-    }
-}
-
 void AdvanceFocus(MainWindow* win) {
     // Tab order: Frame -> Chapter -> Page -> Find -> ToC -> Favorites -> Frame -> ...
 
@@ -8970,21 +8956,6 @@ constexpr const char* kSelectionPositionStr = "${selectionposition}";
 // https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes
 // https://en.wikipedia.org/wiki/List_of_ISO_639_language_codes
 
-// A URL can only carry so much text, and quietly sending less than the user
-// selected looks like the service ignored half the request (discussion #5900).
-static void NotifyUrlSelectionTruncated(WindowTab* tab) {
-    if (!tab || !tab->win) {
-        return;
-    }
-    NotificationCreateArgs args;
-    args.win = tab->win;
-    args.tab = tab;
-    args.warning = true;
-    args.timeoutMs = 5000;
-    args.msg = Tr("Selection was too long for a URL and was shortened.");
-    ShowNotification(args);
-}
-
 static void LaunchBrowserWithSelection(WindowTab* tab, Str urlPattern) {
     if (!tab || !HasPermission(Perm::InternetAccess) || !HasPermission(Perm::CopySelection)) {
         return;
@@ -9501,14 +9472,6 @@ static void ListPrintersThread(HWND* hwndPtr) {
     d->text = str::Dup(ToStr(out));
     delete hwndPtr;
     uitask::Post(MkFunc0<ListPrintersResult>(ListPrintersShowResult, d));
-}
-
-static void ReopenLastClosedFile(MainWindow* win) {
-    Str path = PopRecentlyClosedDocument();
-    if (len(path) == 0) {
-        return;
-    }
-    LoadDocument(win, path);
 }
 
 void CopyFilePath(WindowTab* tab) {
@@ -14048,52 +14011,6 @@ static bool IsSimpleOpenCase(const Flags& i, bool isFirstWin) {
     return true;
 }
 
-// Send just the path + newWindow flag to an already-running SumatraPDF via
-// WM_COPYDATA. Receiver (OnCopyData) handles it asynchronously so this
-// SendMessageW returns fast. Returns true if the message was handled.
-static bool SendOpenFileToExistingInstance(HWND targetHwnd, Str fullPath, u32 newWindow) {
-    size_t pathLen = strlen(fullPath.s);
-    size_t cbData = sizeof(SumatraOpenCopyData) + pathLen + 1;
-    SumatraOpenCopyData* payload = (SumatraOpenCopyData*)malloc(cbData);
-    if (!payload) {
-        return false;
-    }
-    payload->newWindow = newWindow;
-    memcpy(payload + 1, fullPath.s, pathLen + 1);
-    COPYDATASTRUCT cds = {kCopyDataOpen, (DWORD)cbData, payload};
-    LRESULT res = SendMessageW(targetHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
-    free(payload);
-    return res != 0;
-}
-
-static bool SendOpenFilesToExistingInstance(HWND targetHwnd, StrVec& paths, u32 newWindow) {
-    size_t cbData = sizeof(SumatraOpenManyCopyData);
-    for (Str path : paths) {
-        cbData += path.len + 1;
-    }
-    if (cbData > MAXDWORD) {
-        return false;
-    }
-
-    u8* payload = (u8*)malloc(cbData);
-    if (!payload) {
-        return false;
-    }
-    auto* data = (SumatraOpenManyCopyData*)payload;
-    data->newWindow = newWindow;
-    data->pathCount = (u32)len(paths);
-    u8* dst = payload + sizeof(*data);
-    for (Str path : paths) {
-        memcpy(dst, path.s, path.len);
-        dst += path.len;
-        *dst++ = 0;
-    }
-    COPYDATASTRUCT cds = {kCopyDataOpenMany, (DWORD)cbData, payload};
-    LRESULT res = SendMessageW(targetHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
-    free(payload);
-    return res != 0;
-}
-
 // delegate file opening to a previously running instance by sending a DDE message
 static void OpenUsingDDE(HWND targetHwnd, Str path, Flags& i, bool isFirstWin) {
     TempStr fullPath = path::NormalizeTemp(path);
@@ -14146,14 +14063,6 @@ static void OpenUsingDDE(HWND targetHwnd, Str path, Flags& i, bool isFirstWin) {
         targetHwnd = nullptr; // force DDEExecute
     }
     SendMyselfDDE(ToStr(cmd), targetHwnd);
-}
-
-// enters presentation or fullscreen, leaving the other one first
-void SwitchToFullScreen(MainWindow* win, bool presentation) {
-    if (presentation ? win->isFullScreen : win->presentation) {
-        ExitFullScreen(win);
-    }
-    EnterFullScreen(win, presentation);
 }
 
 static void FlagsEnterFullscreen(const Flags& flags, MainWindow* win) {

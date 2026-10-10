@@ -1768,3 +1768,100 @@ bool TextSelectExtendFromVk(int key, TextSelectUnit& unit, int& delta) {
             return false;
     }
 }
+
+void ToggleFullScreen(MainWindow* win, bool presentation) {
+    bool enterFullScreen = presentation ? !win->InPresentation() : !win->isFullScreen;
+
+    if (win->InPresentation() || win->isFullScreen) {
+        ExitFullScreen(win);
+    } else {
+        RememberDefaultWindowPosition(win);
+    }
+
+    if (enterFullScreen && (!presentation || win->IsDocLoaded())) {
+        EnterFullScreen(win, presentation);
+    }
+}
+
+// A URL can only carry so much text, and quietly sending less than the user
+// selected looks like the service ignored half the request (discussion #5900).
+void NotifyUrlSelectionTruncated(WindowTab* tab) {
+    if (!tab || !tab->win) {
+        return;
+    }
+    NotificationCreateArgs args;
+    args.win = tab->win;
+    args.tab = tab;
+    args.warning = true;
+    args.timeoutMs = kNotif5SecsTimeOut;
+    args.msg = Tr("Selection was too long for a URL and was shortened.");
+    ShowNotification(args);
+}
+
+void ReopenLastClosedFile(MainWindow* win) {
+    Str path = PopRecentlyClosedDocument();
+    if (len(path) == 0) {
+        return;
+    }
+    logf("ReopenLastClosedFile: '%s'\n", path);
+    LoadDocument(win, path);
+}
+
+// Enter the requested mode even when the window is in the other fullscreen
+// mode, as command-line and DDE requests require.
+void SwitchToFullScreen(MainWindow* win, bool presentation) {
+    if (presentation ? win->isFullScreen : win->InPresentation()) {
+        ExitFullScreen(win);
+    }
+    EnterFullScreen(win, presentation);
+}
+
+#if OS_WIN
+
+// Send just the path + newWindow flag to an already-running SumatraPDF via
+// WM_COPYDATA. Receiver (OnCopyData) handles it asynchronously so this
+// SendMessageW returns fast. Returns true if the message was handled.
+bool SendOpenFileToExistingInstance(HWND targetHwnd, Str fullPath, u32 newWindow) {
+    size_t pathLen = (size_t)len(fullPath);
+    size_t cbData = sizeof(SumatraOpenCopyData) + pathLen + 1;
+    auto* payload = (SumatraOpenCopyData*)malloc(cbData);
+    if (!payload) {
+        return false;
+    }
+    payload->newWindow = newWindow;
+    memcpy(payload + 1, fullPath.s, pathLen + 1);
+    COPYDATASTRUCT cds = {kCopyDataOpen, (DWORD)cbData, payload};
+    LRESULT res = SendMessageW(targetHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
+    free(payload);
+    return res != 0;
+}
+
+bool SendOpenFilesToExistingInstance(HWND targetHwnd, StrVec& paths, u32 newWindow) {
+    size_t cbData = sizeof(SumatraOpenManyCopyData);
+    for (Str path : paths) {
+        cbData += (size_t)path.len + 1;
+    }
+    if (cbData > MAXDWORD) {
+        return false;
+    }
+
+    u8* payload = (u8*)malloc(cbData);
+    if (!payload) {
+        return false;
+    }
+    auto* data = (SumatraOpenManyCopyData*)payload;
+    data->newWindow = newWindow;
+    data->pathCount = (u32)len(paths);
+    u8* dst = payload + sizeof(*data);
+    for (Str path : paths) {
+        memcpy(dst, path.s, (size_t)path.len);
+        dst += path.len;
+        *dst++ = 0;
+    }
+    COPYDATASTRUCT cds = {kCopyDataOpenMany, (DWORD)cbData, payload};
+    LRESULT res = SendMessageW(targetHwnd, WM_COPYDATA, 0, (LPARAM)&cds);
+    free(payload);
+    return res != 0;
+}
+
+#endif // OS_WIN

@@ -313,6 +313,7 @@ struct PasswordUI;
 
 MainWindow* LoadDocument(LoadArgs* args);
 MainWindow* LoadDocument(MainWindow* win, Str path);
+void RememberDefaultWindowPosition(MainWindow* win);
 MainWindow* LoadDocumentFinish(LoadArgs* args);
 void StartLoadDocument(LoadArgs* args);
 void StartLoadDocuments(StrVec& paths, MainWindow* win, bool skipHistory = false);
