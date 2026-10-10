@@ -46,3 +46,13 @@ constexpr float kFreeTextLineHeight = 1.2f;
 constexpr float kStampAnnotDefaultDx = 190.f;
 
 bool AppendInkPoint(MainWindow* win, DisplayModel* dm, Point pt);
+
+// implemented by each app: what placement asks of the window system
+void PlacementFocusFrame(MainWindow* win);
+void PlacementCaptureMouse(MainWindow* win);
+void PlacementReleaseMouse(MainWindow* win);
+void ReleasePlacementCapture(MainWindow* win);
+void RestoreCanvasCursor(MainWindow* win);
+void PlacementRunCreateCmd(MainWindow* win, int cmdId, Point pt);
+// orig's Canvas.cpp, ng's gui/DocCanvas.cpp
+bool IsDragDistance(int x1, int x2, int y1, int y2);

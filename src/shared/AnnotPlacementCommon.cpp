@@ -534,3 +534,260 @@ bool AnnotationPlacementEraseAt(MainWindow* win, Point pt) {
     }
     return true;
 }
+
+bool CancelAnnotationPlacement(MainWindow* win) {
+    if (!IsPlacingAnnotation(win)) {
+        return false;
+    }
+    AnnotPlacement& p = win->annotPlacement;
+    ReleasePlacementCapture(win);
+    Kind group = NotifGroupForKind(p.kind);
+    p.Reset();
+    if (group) {
+        RemoveNotificationsForGroup(win, group);
+    }
+    HideAnnotationHoverOverlay(win);
+    ScheduleRepaint(win, 0);
+    RestoreCanvasCursor(win);
+    ToolbarUpdateStateForWindow(win, false);
+    return true;
+}
+
+void CommitPlacementCommand(MainWindow* win, Point pt) {
+    int cmdId = win->annotPlacement.cmdId;
+    PlacementRunCreateCmd(win, cmdId, pt);
+    CancelAnnotationPlacement(win);
+}
+
+// The first page click anchors the preview. A second click on that page
+// executes the original command with both endpoints; a click anywhere else
+// cancels the mode because a PDF line annotation cannot span pages.
+static bool HandleLineClick(MainWindow* win, Point pt, bool isShift) {
+    if (!IsPlacingLineAnnotation(win)) {
+        return false;
+    }
+    DisplayModel* dm = win->AsFixed();
+    AnnotPlacement& p = win->annotPlacement;
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    bool started = p.pageNo > 0;
+    if (!dm || !dm->ValidPageNo(pageNo) || (started && pageNo != p.pageNo)) {
+        CancelAnnotationPlacement(win);
+        return true;
+    }
+    if (!started) {
+        p.pageNo = pageNo;
+        p.start = dm->CvtFromScreen(pt, pageNo);
+        p.end = pt;
+        ScheduleRepaint(win, 0);
+        return true;
+    }
+    p.end = isShift ? SnapLineEndpoint(dm->CvtToScreen(pageNo, p.start), pt) : pt;
+    CommitPlacementCommand(win, pt);
+    return true;
+}
+
+// Each page click commits a vertex and starts previewing the next segment.
+// A click off that page cancels the whole path, matching line placement.
+// Ctrl+click commits the vertex and then closes the shape, repeating the first
+// point so the last segment runs back to it (issue #6119).
+static bool HandlePolyLineClick(MainWindow* win, Point pt, bool isShift, bool isCtrl) {
+    if (!IsPlacingPolyLineAnnotation(win)) {
+        return false;
+    }
+    DisplayModel* dm = win->AsFixed();
+    AnnotPlacement& p = win->annotPlacement;
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    bool started = len(p.points) > 0;
+    if (!dm || !dm->ValidPageNo(pageNo) || (started && pageNo != p.pageNo)) {
+        CancelAnnotationPlacement(win);
+        return true;
+    }
+    if (!started) {
+        p.pageNo = pageNo;
+    }
+    if (started && isShift) {
+        pt = SnapLineEndpoint(dm->CvtToScreen(pageNo, p.points[len(p.points) - 1]), pt);
+    }
+    VecAppend(p.points, dm->CvtFromScreen(pt, pageNo));
+    p.end = pt;
+    // one point plus this click is a single segment; closing it would just
+    // double back on itself, so let it keep collecting vertices instead
+    bool close = isCtrl && len(p.points) > 2;
+    if (close) {
+        // by value: VecAppend takes a reference, and growing the vec frees the
+        // buffer that reference would point into
+        // by value: VecAppend takes a reference, and growing the vec frees the
+        // buffer that reference would point into
+        PointF first = p.points[0];
+        VecAppend(p.points, first);
+        CommitPlacementCommand(win, dm->CvtToScreen(pageNo, first));
+        return true;
+    }
+    ScheduleRepaint(win, 0);
+    return true;
+}
+
+static bool HandleShapeDown(MainWindow* win, Point pt, bool isShift) {
+    if (!IsPlacingShapeAnnotation(win)) {
+        return false;
+    }
+    PlacementFocusFrame(win);
+    DisplayModel* dm = win->AsFixed();
+    AnnotPlacement& p = win->annotPlacement;
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    bool started = p.pageNo > 0;
+    if (!dm || !dm->ValidPageNo(pageNo) || (started && pageNo != p.pageNo)) {
+        CancelAnnotationPlacement(win);
+        return true;
+    }
+
+    p.end = pt;
+    p.constrain = isShift;
+    if (started) {
+        CommitShapePlacement(win);
+        return true;
+    }
+
+    p.pageNo = pageNo;
+    p.start = dm->CvtFromScreen(pt, pageNo);
+    p.mouseDown = true;
+    p.didDrag = false;
+    PlacementCaptureMouse(win);
+    ScheduleRepaint(win, 0);
+    return true;
+}
+
+static bool HandleShapeUp(MainWindow* win, Point pt, bool isShift) {
+    if (!IsPlacingShapeAnnotation(win) || !win->annotPlacement.mouseDown) {
+        return false;
+    }
+    PlacementReleaseMouse(win);
+    AnnotPlacement& p = win->annotPlacement;
+    p.mouseDown = false;
+    DisplayModel* dm = win->AsFixed();
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    if (!dm || pageNo != p.pageNo) {
+        CancelAnnotationPlacement(win);
+        return true;
+    }
+
+    p.end = pt;
+    p.constrain = isShift;
+    Point start = dm->CvtToScreen(pageNo, p.start);
+    if (p.didDrag || IsDragDistance(pt.x, start.x, pt.y, start.y)) {
+        CommitShapePlacement(win);
+    } else {
+        ScheduleRepaint(win, 0);
+    }
+    return true;
+}
+
+static bool HandleInkDown(MainWindow* win, Point pt) {
+    if (!IsPlacingInkAnnotation(win)) {
+        return false;
+    }
+    PlacementFocusFrame(win);
+    DisplayModel* dm = win->AsFixed();
+    AnnotPlacement& p = win->annotPlacement;
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    bool started = p.pageNo > 0;
+    if (!dm || !dm->ValidPageNo(pageNo) || (started && pageNo != p.pageNo)) {
+        CancelAnnotationPlacement(win);
+        return true;
+    }
+    if (p.mouseDown) {
+        return true;
+    }
+    if (!started) {
+        p.pageNo = pageNo;
+    }
+    VecAppend(p.strokeCounts, 0);
+    p.mouseDown = true;
+    AppendInkPoint(win, dm, pt);
+    PlacementCaptureMouse(win);
+    return true;
+}
+
+static bool HandleInkUp(MainWindow* win, Point pt) {
+    if (!IsPlacingInkAnnotation(win) || !win->annotPlacement.mouseDown) {
+        return false;
+    }
+    AppendInkPoint(win, win->AsFixed(), pt);
+    PlacementReleaseMouse(win);
+    win->annotPlacement.mouseDown = false;
+    int cmdId = win->annotPlacement.cmdId;
+    FinishInkAnnotationPlacement(win);
+    StartAnnotationPlacement(win, cmdId);
+    return true;
+}
+
+bool AnnotationPlacementOnLeftDown(MainWindow* win, Point pt, bool isShift, bool isCtrl) {
+    switch (KindOf(win)) {
+        case AnnotPlacementKind::Ink:
+            HandleInkDown(win, pt);
+            return true;
+        case AnnotPlacementKind::Shape:
+            HandleShapeDown(win, pt, isShift);
+            return true;
+        case AnnotPlacementKind::Line:
+            PlacementFocusFrame(win);
+            HandleLineClick(win, pt, isShift);
+            return true;
+        case AnnotPlacementKind::PolyLine:
+            PlacementFocusFrame(win);
+            HandlePolyLineClick(win, pt, isShift, isCtrl);
+            return true;
+        case AnnotPlacementKind::Text:
+        case AnnotPlacementKind::FreeText:
+        case AnnotPlacementKind::Stamp:
+        case AnnotPlacementKind::Caret:
+        case AnnotPlacementKind::FileAttachment:
+            PlacementFocusFrame(win);
+            PlacePointAnnotationAt(win, pt);
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool AnnotationPlacementOnLeftUp(MainWindow* win, Point pt, bool isShift) {
+    if (HandleInkUp(win, pt)) {
+        return true;
+    }
+    return HandleShapeUp(win, pt, isShift);
+}
+
+bool AnnotationPlacementOnLeftDblClk(MainWindow* win, Point pt) {
+    if (IsPlacingInkAnnotation(win)) {
+        HandleInkDown(win, pt);
+        return true;
+    }
+    if (IsPlacingPolyLineAnnotation(win)) {
+        PlacementFocusFrame(win);
+        FinishPolyLineAnnotationPlacement(win);
+        return true;
+    }
+    return false;
+}
+
+bool AnnotationPlacementOnRightDown(MainWindow* win) {
+    if (!IsPlacingPolyLineAnnotation(win)) {
+        return false;
+    }
+    PlacementFocusFrame(win);
+    FinishPolyLineAnnotationPlacement(win);
+    return true;
+}
+
+// The highlighter leaves the mouse to text selection, which it acts on when
+// a selection is finished.
+void AnnotationPlacementOnSelectionStop(MainWindow* win) {
+    if (KindOf(win) != AnnotPlacementKind::Highlighter) {
+        return;
+    }
+    WindowTab* tab = win->CurrentTab();
+    if (!tab || !tab->selectionOnPage || !win->showSelection) {
+        return;
+    }
+    PlacementRunCreateCmd(win, win->annotPlacement.cmdId, Point{});
+}
