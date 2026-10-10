@@ -1066,6 +1066,8 @@ struct TreeView : ControlBase {
 
     TreeModel* treeModel = nullptr; // not owned by us
     bool lazyChildren = false;
+    // selection made while 0-sized: scroll it into view on the first real size
+    bool revealSelOnSize = false;
 
     // for WM_NOTIFY with TVN_GETINFOTIP
     GetTooltipHandler onGetTooltip;

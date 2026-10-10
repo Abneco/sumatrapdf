@@ -362,6 +362,8 @@ export const TVGN_NEXT = 0x1;
 export const TVGN_CHILD = 0x4;
 export const TVGN_CARET = 0x9;
 export const TVGN_NEXTVISIBLE = 0x6;
+export const TVGN_FIRSTVISIBLE = 0x5;
+export const TVM_GETVISIBLECOUNT = 0x1110;
 export const TVE_COLLAPSE = 0x1;
 export const TVE_EXPAND = 0x2;
 
@@ -803,6 +805,19 @@ export function countVisibleTreeRows(tree: number): number {
     it = treeGetNextItem(tree, TVGN_NEXTVISIBLE, it);
   }
   return n;
+}
+
+// is the item one of the rows that fit entirely in the tree's client area
+export function treeIsItemInView(tree: number, item: bigint): boolean {
+  const nFit = Number(sendMessage(tree, TVM_GETVISIBLECOUNT, 0, 0));
+  let it = treeGetNextItem(tree, TVGN_FIRSTVISIBLE);
+  for (let i = 0; i < nFit && it !== 0n; i++) {
+    if (it === item) {
+      return true;
+    }
+    it = treeGetNextItem(tree, TVGN_NEXTVISIBLE, it);
+  }
+  return false;
 }
 
 // collapse every top-level node

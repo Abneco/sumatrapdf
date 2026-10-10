@@ -212,6 +212,15 @@ void TreeView::WndProc(ControlBase::WndProcEvent* ev) {
         return;
     }
 
+    // A 0-sized tree scrolls a newly selected item to just above its top.
+    if (WM_SIZE == msg && revealSelOnSize && LOWORD(lparam) > 0 && HIWORD(lparam) > 0) {
+        revealSelOnSize = false;
+        ev->result = FinalWindowProc(msg, wparam, lparam);
+        ev->didHandle = true;
+        TreeView_EnsureVisible(hwnd, TreeView_GetSelection(hwnd));
+        return;
+    }
+
     if (WM_KEYDOWN == msg) {
         // Enter is handled here (expand/collapse) before DefWindowProc, so TVN_KEYDOWN
         // never fires for it. Let onKeyDown run first — Favorites uses Enter to open
@@ -274,6 +283,7 @@ bool TreeView::SelectItem(TreeItem ti) {
     // buries other top-level windows (annotations editor, command palette).
     HWND prev = ::GetFocus();
     BOOL ok = TreeView_SelectItem(hwnd, hi);
+    revealSelOnSize = hi && HwndClientRect(hwnd).IsEmpty();
     if (prev && prev != hwnd && ::GetFocus() == hwnd) {
         ::SetFocus(prev);
     }

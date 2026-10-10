@@ -1009,11 +1009,26 @@ static TocItem* VisibleTocAt(TocItem* item, int& idx) {
     return nullptr;
 }
 
+// is the selected bookmark's row entirely inside the pane
+static bool IsTocSelShown(SidebarUI* ui) {
+    if (!ui || !ui->tocSel) {
+        return false;
+    }
+    for (int i = 0; i < len(ui->tocRows); i++) {
+        if (ui->tocRows[i].item != ui->tocSel) {
+            continue;
+        }
+        float top = (float)i * kRowDy;
+        return top >= ui->tocScrollY && top + kRowDy <= ui->tocScrollY + ui->tocView.h;
+    }
+    return false;
+}
+
 // visible rows, and whether a bookmark is selected (the native tree's caret)
 static TempStr TocProbeRows(MainWindow* win, TocItem* root) {
     SidebarUI* ui = win ? win->sidebar : nullptr;
     int sel = ui && ui->tocSel ? 1 : 0;
-    return fmt("tocRows=%d tocSel=%d", root ? CountVisibleToc(root) : 0, sel);
+    return fmt("tocRows=%d tocSel=%d tocSelShown=%d", root ? CountVisibleToc(root) : 0, sel, IsTocSelShown(ui) ? 1 : 0);
 }
 
 // count / select / expand the bookmarks the native tree drives with TVM_*
@@ -2042,7 +2057,10 @@ static gp::El* BuildTocPane(MainWindow* win, gp::Ctx* cx, bool top) {
             }
         }
         ui->tocScrollY = ScrollToRow(ui->tocScrollY, ui->tocView.h, idx, nRows);
-        ui->tocReveal = nullptr;
+        // the pane has no height before its first layout: reveal on a later frame
+        if (ui->tocView.h > 0) {
+            ui->tocReveal = nullptr;
+        }
     }
 
     // ng: the pane is inset on the right so nothing it draws sits under the
