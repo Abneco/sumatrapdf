@@ -232,6 +232,8 @@ void CopyLocationToClipboard(WindowTab*);
 MainWindow* FindMainWindowByFile(Str file, bool focusTab, MainWindow* limitWin = nullptr);
 MainWindow* FindMainWindowBySyncFile(Str path, bool focusTab);
 WindowTab* FindTabByFile(Str file, MainWindow* limitWin = nullptr);
+WindowTab* FindTabByFilePath(Str path, MainWindow* limitWin);
+void ExecuteCmd(MainWindow* win, int cmdId);
 void SelectTabInWindow(WindowTab*);
 
 bool IsDocumentOpenOrLoading(Str file);

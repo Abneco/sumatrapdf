@@ -460,166 +460,9 @@ void PaintForwardSearchMark(MainWindow* win, Gfx* gfx) {
     PaintTransparentRectangles(gfx, win->canvasRc, rects, parsedCol->col, alpha);
 }
 
-// Replace in 'pattern' the macros %f %l %c by 'path', 'line' and 'col'
-static TempStr BuildOpenFileCmdTemp(Str pattern, Str path, int line, int col) {
-    str::Builder cmdline;
-    cmdline.Reserve(256);
-
-    logf("BuildOpenFileCmdTemp: path: '%s', pattern: '%s'\n", path, pattern);
-    Str s = pattern;
-    while (s) {
-        int percIdx = str::IndexOfChar(s, '%');
-        if (percIdx < 0) {
-            cmdline.Append(s);
-            break;
-        }
-        cmdline.Append(Str(s.s, percIdx));
-        if (percIdx + 1 >= s.len) {
-            cmdline.Append(Str(s.s + percIdx, s.len - percIdx));
-            break;
-        }
-        char spec = s.s[percIdx + 1];
-        if (spec == 'f') {
-            // Defense in depth against argument injection via a crafted synctex
-            // source name (GHSA-jf4v-rw66-j4w2). Every built-in editor template
-            // wraps %f in quotes, so a '"' in the path would close that quote and
-            // turn the rest into separate argv tokens for the editor. Double each
-            // '"' so it stays one token. The primary fix rejects such names in
-            // SyncTex::DocToSource; this covers other callers and user templates.
-            if (str::ContainsChar(path, '"')) {
-                cmdline.Append(str::ReplaceTemp(path, StrL("\""), StrL("\"\"")));
-            } else {
-                cmdline.Append(path);
-            }
-        } else if (spec == 'l') {
-            cmdline.Append(fmt("%d", line));
-        } else if (spec == 'c') {
-            cmdline.Append(fmt("%d", col));
-        } else if (spec == '%') {
-            cmdline.AppendChar('%');
-        } else {
-            cmdline.Append(Str(s.s + percIdx, 2));
-        }
-        s = Str(s.s + percIdx + 2, s.len - percIdx - 2);
-    }
-
-    return ToStrTemp(cmdline);
-}
-
-// returns true if inverse search was performed
-bool OnInverseSearch(MainWindow* win, int x, int y) {
-    if (!CanAccessDisk() || gPluginMode) {
-        return false;
-    }
-    WindowTab* tab = win->CurrentTab();
-    if (!tab || tab->GetEngineType() != kindEngineMupdf) {
-        return false;
-    }
-    DisplayModel* dm = tab->AsFixed();
-
-    // Clear the last forward-search result
-    VecReset(win->fwdSearchMark.rects);
-    HwndInvalidate(win->hwndCanvas);
-
-    // On double-clicking error message will be shown to the user
-    // if the PDF does not have a synchronization file
-    if (!dm->pdfSync) {
-        Str path = tab->filePath;
-        int err = Synchronizer::Create(path, dm->GetEngine(), &dm->pdfSync);
-        if (err == PDFSYNCERR_SYNCFILE_NOTFOUND) {
-            // We used to warn that "No synchronization file found" at this
-            // point if gSettings->enableTeXEnhancements is set; we no longer
-            // so do because a double-click has several other meanings
-            // (selecting a word or an image, navigating quickly using links)
-            // and showing an unrelated warning in all those cases seems wrong
-            return false;
-        }
-        if (err != PDFSYNCERR_SUCCESS) {
-            NotificationCreateArgs args;
-            args.win = win;
-            args.msg = Tr("Synchronization file cannot be opened");
-            ShowNotification(args);
-            return true;
-        }
-    }
-
-    int pageNo = dm->GetPageNoByPoint(Point(x, y));
-    if (!tab->ctrl->ValidPageNo(pageNo)) {
-        return false;
-    }
-
-    Point pt = ToPoint(dm->CvtFromScreen(Point(x, y), pageNo));
-    Str srcfilepath;
-    int line = 0;
-    int col = 0;
-    int err = dm->pdfSync->DocToSource(pageNo, pt, srcfilepath, &line, &col);
-    if (err != PDFSYNCERR_SUCCESS) {
-        NotificationCreateArgs args;
-        args.win = win;
-        args.msg = Tr("No synchronization info at this position");
-        ShowNotification(args);
-        return true;
-    }
-
-    Str inverseSearch = gSettings->inverseSearchCmdLine;
-    if (len(inverseSearch) == 0) {
-        Vec<TextEditor*> editors;
-        DetectTextEditors(editors);
-        if (len(editors) > 0) {
-            inverseSearch = str::DupTemp(editors[0]->openFileCmd);
-        }
-    }
-
-    Str cmdLine;
-    if (inverseSearch) {
-        cmdLine = BuildOpenFileCmdTemp(inverseSearch, srcfilepath, line, col);
-    }
-    str::Free(srcfilepath);
-
-    NotificationCreateArgs args;
-    args.win = win;
-    args.msg = Tr("Cannot start the inverse search command. Check its command line in Settings.");
-    if (len(cmdLine) > 0) {
-        // resolve relative paths with relation to SumatraPDF.exe's directory
-        TempStr appDir = GetSelfExeDirTemp();
-        AutoCloseHandle process(LaunchProcessInDir(cmdLine, appDir));
-        if (!process) {
-            ShowNotification(args);
-        }
-    } else if (gSettings->enableTeXEnhancements) {
-        ShowNotification(args);
-    }
-
-    return true;
-}
-
-// Flash the same mark used for LaTeX forward search at an internal-link dest
-// (issues #1085, #5945). Always fades; ForwardSearch.HighlightPermanent stays
-// a SyncTeX-only option. Held longer than SyncTeX (kHideLinkDestMarkDelayInMs)
-// so the mark is still visible after the page jump.
-void ShowLinkDestHighlight(MainWindow* win, int pageNo, RectF dest) {
-    if (!win || !win->AsFixed()) {
-        return;
-    }
-    VecReset(win->fwdSearchMark.rects);
-    win->fwdSearchMark.show = false;
-    if (!gSettings || !gSettings->highlightLinkDestination) {
-        return;
-    }
-    DisplayModel* dm = win->AsFixed();
-    if (!dm->ValidPageNo(pageNo)) {
-        return;
-    }
-    Rect hl;
-    if (!LinkDestHighlightRect(dm, pageNo, dest, &hl)) {
-        return;
-    }
-    VecAppend(win->fwdSearchMark.rects, hl);
-    win->fwdSearchMark.page = pageNo;
-    win->fwdSearchMark.show = true;
-    win->fwdSearchMark.hideStep = 0;
-    SetTimer(win->hwndCanvas, kHideFwdSearchMarkTimerID, kHideLinkDestMarkDelayInMs, nullptr);
-    ScheduleRepaint(win, 0);
+// starts fading the forward search mark after delayMs
+void HideFwdSearchMarkAfter(MainWindow* win, int delayMs) {
+    SetTimer(win->hwndCanvas, kHideFwdSearchMarkTimerID, delayMs, nullptr);
 }
 
 void ShowForwardSearchResult(MainWindow* win, Str fileName, int line, int /* col */, int ret, int page,
@@ -697,20 +540,16 @@ if newwindow = 1 then a new window is created even if the file is already open
 if focus = 1 then the focus is set to the window
 */
 
-// Prefer the MainWindow that owns hwnd when it already has pdfFile open
-// (any tab); otherwise fall back to the global FindMainWindowByFile.
-MainWindow* FindDdeTargetWindow(HWND hwnd, Str pdfFile, bool focusTab) {
-    MainWindow* prefer = FindMainWindowByHwnd(hwnd);
-    if (prefer) {
-        WindowTab* tab = FindTabByFile(pdfFile, prefer);
-        if (tab) {
-            if (focusTab) {
-                SelectTabInWindow(tab);
-            }
-            return prefer;
-        }
+MainWindow* WindowFromHwnd(HWND hwnd) {
+    return FindMainWindowByHwnd(hwnd);
+}
+
+MainWindow* LastActiveWindow() {
+    MainWindow* win = FindMainWindowByHwnd(gLastActiveFrameHwnd);
+    if (!win && len(gWindows) > 0) {
+        win = gWindows[0];
     }
-    return FindMainWindowByFile(pdfFile, focusTab);
+    return win;
 }
 
 /*
@@ -948,58 +787,6 @@ Returns:
 error: <error message>
 if file doesn't exist or no opened file
 */
-static Str HandleGetFileStateCmd(Str cmd, bool* ack, str::Builder& res) {
-    TempStr filePath;
-    Str next = str::Parse(cmd, "[GetFileState(\"%s\")]", &filePath);
-    if (str::IsNull(next)) {
-        next = str::Parse(cmd, "[GetFileState()]");
-    }
-    if (str::IsNull(next)) {
-        next = str::Parse(cmd, "[GetFileState]");
-    }
-    if (str::IsNull(next)) {
-        return {};
-    }
-
-    // we recognized the command, so from here on we always produce a response
-    *ack = true;
-
-    MainWindow* win = nullptr;
-    if (len(filePath) > 0) {
-        win = FindMainWindowByFile(filePath, true);
-    } else {
-        // no path given: report the currently active document
-        win = FindMainWindowByHwnd(gLastActiveFrameHwnd);
-        if (!win && len(gWindows) > 0) {
-            win = gWindows[0];
-        }
-    }
-    if (!win) {
-        res.Append(StrL("error: no opened file"));
-        return next;
-    }
-    if (!win->IsDocLoaded()) {
-        ReloadDocument(win, false);
-        if (!win->IsDocLoaded()) {
-            res.Append(StrL("error: file not loaded"));
-            return next;
-        }
-    }
-
-    DocController* ctrl = win->ctrl;
-    Str docPath = ctrl->GetFilePath();
-    // zoom uses the same convention as SetView: a percentage, or -1 = fit page,
-    // -2 = fit width, -3 = fit content, -6 = fit height
-    float zoom = ctrl->GetZoomVirtual();
-    Str view = DisplayModeToString(ctrl->GetDisplayMode());
-    res.Append(fmt("path: %s\n", docPath));
-    res.Append(fmt("page: %d\n", ctrl->CurrentPageNo()));
-    res.Append(fmt("pageCount: %d\n", ctrl->PageCount()));
-    res.Append(fmt("zoom: %g\n", zoom));
-    res.Append(fmt("view: %s\n", view));
-    res.Append(fmt("sumver: %s\n", StrL(CURR_VERSION_STRA)));
-    return next;
-}
 
 // returns the document position currently under the mouse cursor, in PDF points
 // -- the same unit as the "pt" cursor-position notification and .smx files
@@ -1048,48 +835,6 @@ static Str HandleGetMousePosCmd(Str cmd, bool* ack, str::Builder& res) {
 Handle all commands as defined in Commands.h
 eg: [CmdClose] or [CmdCreateAnnotHighlight #00ff00 openEdit]
 */
-static Str HandleCmdCommand(HWND hwnd, Str cmd, bool* ack) {
-    TempStr cmdContent;
-    Str next = str::Parse(cmd, "[%s]", &cmdContent);
-    if (str::IsNull(next)) {
-        return {};
-    }
-    // cmdContent is the full content between [ and ]
-    // it might be just "CmdClose" or "CmdCreateAnnotHighlight #00ff00 openEdit"
-    // extract the command name (first space-delimited token)
-    Str content = cmdContent;
-    int spaceIdx = str::IndexOfChar(content, ' ');
-    TempStr name;
-    if (spaceIdx >= 0) {
-        name = str::DupTemp(Str(content.s, spaceIdx));
-    } else {
-        name = str::DupTemp(content);
-    }
-
-    int cmdId = GetCommandIdByName(name);
-    if (cmdId < 0) {
-        return {};
-    }
-    MainWindow* win = FindMainWindowByHwnd(hwnd);
-    if (!win) {
-        logf("HandleCmdCommand: not executing DDE because MainWindow for hwnd 0x%p not found\n", hwnd);
-        return {};
-    }
-
-    // if there are arguments after the command name, create a custom command with those args
-    int idToSend = cmdId;
-    if (spaceIdx >= 0) {
-        CustomCommand* customCmd = CreateCommandFromDefinition(cmdContent);
-        if (customCmd) {
-            idToSend = customCmd->id;
-        }
-    }
-
-    logf("HandleCmdCommand: sending %d (%s) command\n", idToSend, cmdContent);
-    SendMessageW(win->hwndFrame, WM_COMMAND, idToSend, 0);
-    *ack = true;
-    return next;
-}
 
 // returns true if did handle a message
 bool HandleExecuteCmds(HWND hwnd, Str cmd) {

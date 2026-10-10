@@ -444,6 +444,15 @@ static WindowTab* FindTabByFileInWindow(Str file, MainWindow* win) {
     return nullptr;
 }
 
+WindowTab* FindTabByFilePath(Str path, MainWindow* limitWin) {
+    return FindTabByFile(path, limitWin);
+}
+
+// Runs a command in win, as if picked from its menu.
+void ExecuteCmd(MainWindow* win, int cmdId) {
+    HwndSendCommand(win->hwndFrame, cmdId);
+}
+
 WindowTab* FindTabByFile(Str file, MainWindow* limitWin) {
     if (limitWin) {
         return FindTabByFileInWindow(file, limitWin);

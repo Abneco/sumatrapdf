@@ -125,6 +125,9 @@ void FindWindowDocChanged(MainWindow* win);
 void FindResultsInstalled(MainWindow* win, bool gotSnippets);
 void FindCountShown(MainWindow* win);
 void FindStatusChanged(MainWindow* win);
+void HideFwdSearchMarkAfter(MainWindow* win, int delayMs);
+MainWindow* WindowFromHwnd(HWND hwnd);
+MainWindow* LastActiveWindow();
 
 struct UpdateFindStatusData {
     MainWindow* win;
@@ -138,3 +141,6 @@ struct CountThreadData;
 struct FindThreadData;
 void CountThread(CountThreadData* d);
 void FindThread(FindThreadData* ftd);
+
+Str HandleGetFileStateCmd(Str cmd, bool* ack, str::Builder& res);
+Str HandleCmdCommand(HWND hwnd, Str cmd, bool* ack);
