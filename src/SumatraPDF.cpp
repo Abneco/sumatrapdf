@@ -4314,6 +4314,12 @@ MainWindow* LoadDocument(LoadArgs* args) {
     return result;
 }
 
+// as in ng: open path in win (or a new window when win is null) with default arguments
+MainWindow* LoadDocument(MainWindow* win, Str path) {
+    LoadArgs args(path, win);
+    return LoadDocument(&args);
+}
+
 // Loads document data into the MainWindow.
 void LoadModelIntoTab(WindowTab* tab) {
     if (!tab) {
@@ -9502,8 +9508,7 @@ static void ReopenLastClosedFile(MainWindow* win) {
     if (len(path) == 0) {
         return;
     }
-    LoadArgs args(path, win);
-    LoadDocument(&args);
+    LoadDocument(win, path);
 }
 
 void CopyFilePath(WindowTab* tab) {
@@ -10352,8 +10357,7 @@ static LRESULT FrameOnCommand(MainWindow* win, HWND hwnd, UINT msg, WPARAM wp, L
     if (cmdId == CmdFileHistory && CanAccessDisk()) {
         Str filePath = GetCommandStringArg(cmd, kCmdArgFilePath, {});
         if (len(filePath) > 0) {
-            LoadArgs args(filePath, win);
-            LoadDocument(&args);
+            LoadDocument(win, filePath);
         }
         return 0;
     }

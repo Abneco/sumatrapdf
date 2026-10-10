@@ -657,8 +657,7 @@ void LinkHandler::LaunchFile(Str pathOrig, IPageDestination* remoteLink) {
     } else {
         targetWin = FindMainWindowByFile(fullPath, true);
         if (!targetWin) {
-            LoadArgs args(fullPath, win);
-            targetWin = LoadDocument(&args);
+            targetWin = LoadDocument(win, fullPath);
         }
     }
     if (!targetWin) {

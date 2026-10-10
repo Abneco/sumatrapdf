@@ -111,3 +111,5 @@ constexpr Color kFindOtherMatchColor = MkRgb(0xff, 0x96, 0x32);
 // implemented by each app
 bool ApplyFindPageRange(MainWindow* win);
 void StartFindCount(MainWindow* win, Str text, bool matchCase, bool matchWholeWord);
+
+Str HandleSyncCmd(Str cmd, bool* ack);

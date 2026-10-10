@@ -196,56 +196,6 @@ void GoToFavoritePage(MainWindow* win, Str pageNo, PointF scrollPos) {
     win->Focus();
 }
 
-// Going to a bookmark within current file scrolls to a given page.
-// Going to a bookmark in another file, loads the file and scrolls to a page
-// (similar to how invoking one of the recently opened files works)
-void GoToFavorite(MainWindow* win, FileState* fs, Favorite* fav) {
-    ReportIf(!fs || !fav);
-    if (!fs || !fav) {
-        return;
-    }
-
-    Str fp = fs->filePath;
-    MainWindow* existingWin = FindMainWindowByFile(fp, true);
-    if (existingWin) {
-        auto* data = new GoToFavoritePageData;
-        data->pageNo = str::Dup(fav->pageNo);
-        data->scrollPos = fav->scrollPos;
-        data->win = existingWin;
-        auto fn = MkFunc0<GoToFavoritePageData>(GoToFavoritePage, data);
-        uitask::Post(fn, "TaskGoToFavorite");
-        return;
-    }
-
-    if (!CanAccessDisk()) {
-        return;
-    }
-
-    // When loading a new document, go directly to selected page instead of
-    // first showing last seen page stored in file history
-    // A hacky solution because I don't want to add even more parameters to
-    // LoadDocument() and LoadDocumentInto()
-    Str pageNo = fav->pageNo;
-    PointF scrollPos = fav->scrollPos;
-    FileState* ds = FileHistoryFindByPath(fs->filePath);
-    if (ds && !ds->useDefaultState && gSettings->rememberStatePerDocument) {
-        str::ReplaceWithCopy(&ds->pageNo, fav->pageNo);
-        ds->scrollPos = fav->scrollPos;
-        pageNo = {};
-    }
-
-    LoadArgs args(fs->filePath, win);
-    win = LoadDocument(&args);
-    if (win && pageNo) {
-        auto* data = new GoToFavoritePageData;
-        data->pageNo = str::Dup(pageNo);
-        data->scrollPos = scrollPos;
-        data->win = win;
-        auto fn = MkFunc0<GoToFavoritePageData>(GoToFavoritePage, data);
-        uitask::Post(fn, "TaskGoToFavorite2");
-    }
-}
-
 void GoToFavForTreeItem(MainWindow* win, TreeItem ti) {
     if (!ti) {
         return;

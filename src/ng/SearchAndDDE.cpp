@@ -1507,66 +1507,6 @@ if pdffilepath is provided, the file will be opened if no open window can be fou
 if newwindow = 1 then a new window is created even if the file is already open
 if focus = 1 then the focus is set to the window
 */
-static Str HandleSyncCmd(Str cmd, bool* ack) {
-    TempStr pdfFile, srcFile;
-    BOOL line = 0, col = 0, newWindow = 0, setFocus = 0;
-    Str next = str::Parse(cmd, R"([ForwardSearch("%s",%? "%s",%u,%u)])", &pdfFile, &srcFile, &line, &col);
-    if (str::IsNull(next)) {
-        next = str::Parse(cmd, R"([ForwardSearch("%s",%? "%s",%u,%u,%u,%u)])", &pdfFile, &srcFile, &line, &col,
-                          &newWindow, &setFocus);
-    }
-    // allow to omit the pdffile path, so that editors don't have to know about
-    // multi-file projects (requires that the PDF has already been opened)
-    if (str::IsNull(next)) {
-        pdfFile = {};
-        next = str::Parse(cmd, "[ForwardSearch(\"%s\",%u,%u)]", &srcFile, &line, &col);
-        if (str::IsNull(next)) {
-            next = str::Parse(cmd, "[ForwardSearch(\"%s\",%u,%u,%u,%u)]", &srcFile, &line, &col, &newWindow, &setFocus);
-        }
-    }
-
-    if (str::IsNull(next)) {
-        return {};
-    }
-
-    MainWindow* win = nullptr;
-    if (pdfFile) {
-        // check if the PDF is already opened
-        win = FindMainWindowByFile(pdfFile, !newWindow);
-        // if not then open it
-        if (newWindow || !win) {
-            win = LoadDocument(!newWindow ? win : nullptr, pdfFile);
-        } else if (!win->IsDocLoaded()) {
-            ReloadDocument(win, false);
-        }
-    } else {
-        // check if any opened PDF has sync information for the source file
-        win = FindMainWindowBySyncFile(srcFile, true);
-        if (win && newWindow) {
-            win = LoadDocument(nullptr, win->CurrentTab()->filePath);
-        }
-    }
-
-    if (!win || !win->CurrentTab() || win->CurrentTab()->GetEngineType() != kindEngineMupdf) {
-        return next;
-    }
-
-    DisplayModel* dm = win->AsFixed();
-    if (!dm->pdfSync) {
-        return next;
-    }
-
-    int page;
-    Vec<Rect> rects;
-    int ret = dm->pdfSync->SourceToDoc(srcFile, line, col, &page, rects);
-    ShowForwardSearchResult(win, srcFile, line, col, ret, page, rects);
-    if (setFocus) {
-        win->Focus();
-    }
-
-    *ack = true;
-    return next;
-}
 
 /*
 Search DDE command
