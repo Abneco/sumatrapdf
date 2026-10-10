@@ -20,7 +20,6 @@ void ReadingAutoScrollSlower(MainWindow*);
 void ReadingAutoScrollReverse(MainWindow*);
 void ReadingAutoScrollTick(MainWindow*);
 void ReadingAutoScrollTick(MainWindow*, int elapsedMs);
-bool ReadingAutoScrollOnKey(MainWindow*, WPARAM key);
 bool ReadingAutoScrollOnKey(MainWindow*, int key, bool ctrl, bool shift, bool alt);
 bool ReadingAutoScrollIsOn(MainWindow*);
 void ReadingAutoScrollHideBar(MainWindow*);

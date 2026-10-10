@@ -775,3 +775,69 @@ bool CopySelfToDir(Str destDir) {
     }
     return false;
 }
+
+bool IsProcessUsingFiles(DWORD procId, Str file1, Str file2) {
+    // Note: don't know why procId 0 shows up as using our files
+    if (procId == 0 || procId == GetCurrentProcessId()) {
+        return false;
+    }
+    if (len(file1) == 0 && len(file2) == 0) {
+        return false;
+    }
+    AutoCloseHandle snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, procId);
+    if (snap == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    MODULEENTRY32W mod{};
+    mod.dwSize = sizeof(mod);
+    BOOL cont = Module32FirstW(snap, &mod);
+    while (cont) {
+        WCHAR* exePathW = mod.szExePath;
+        TempStr exePath = ToUtf8Temp(exePathW);
+        if (file1 && path::IsSame(file1, exePath)) {
+            return true;
+        }
+        if (file2 && path::IsSame(file2, exePath)) {
+            return true;
+        }
+        cont = Module32NextW(snap, &mod);
+    }
+    return false;
+}
+
+// returns number of killed processes that have a module (exe or dll) with a given
+// modulePath
+// returns -1 on error, 0 if no matching processes
+int KillProcessesWithModule(Str modulePath, bool waitUntilTerminated) {
+    logf("KillProcessesWithModule: '%s'\n", modulePath);
+    AutoCloseHandle hProcSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (INVALID_HANDLE_VALUE == hProcSnapshot) {
+        return -1;
+    }
+
+    PROCESSENTRY32W pe32;
+    pe32.dwSize = sizeof(pe32);
+    if (!Process32FirstW(hProcSnapshot, &pe32)) {
+        return -1;
+    }
+
+    int killCount = 0;
+    do {
+        if (KillProcWithIdAndModule(pe32.th32ProcessID, modulePath, waitUntilTerminated)) {
+            logf("  killed process with id %d\n", (int)pe32.th32ProcessID);
+            killCount++;
+        }
+    } while (Process32NextW(hProcSnapshot, &pe32));
+
+    if (killCount > 0) {
+        UpdateWindow(FindWindowW(nullptr, L"Shell_TrayWnd"));
+        UpdateWindow(GetDesktopWindow());
+    }
+    return killCount;
+}
+
+bool KillProcessesUsingInstallation() {
+    TempStr dir = GetExistingInstallationDirTemp();
+    return KillProcessesUsingInstallationDir(dir);
+}

@@ -118,61 +118,6 @@ void BarSetSessionTab(MainWindow* win, WindowTab* tab) {
     }
 }
 
-bool ReadingAutoScrollOnKey(MainWindow* win, WPARAM key) {
-    WindowTab* tab = ActiveTab(win);
-    if (!tab) {
-        return false;
-    }
-    if (IsCtrlPressed() || IsShiftPressed() || IsAltPressed()) {
-        return false;
-    }
-    if (IsFindUIVisible(win)) {
-        return false;
-    }
-
-    if (key == VK_ESCAPE) {
-        ReadingAutoScrollStop(win);
-        return true;
-    }
-    if (key == VK_SPACE) {
-        ReadingAutoScrollPause(win);
-        return true;
-    }
-    if (key == VK_DOWN) {
-        ApplyArrowSpeed(win, tab, 1);
-        return true;
-    }
-    if (key == VK_UP) {
-        ApplyArrowSpeed(win, tab, -1);
-        return true;
-    }
-    if (key == VK_LEFT) {
-        if (win->ctrl) {
-            win->ctrl->GoToPrevPage();
-        }
-        return true;
-    }
-    if (key == VK_RIGHT) {
-        if (win->ctrl) {
-            win->ctrl->GoToNextPage();
-        }
-        return true;
-    }
-    if (key == VK_OEM_MINUS || key == VK_SUBTRACT) {
-        ReadingAutoScrollReverse(win);
-        return true;
-    }
-    if (key >= '0' && key <= '9') {
-        ApplyDigitSpeed(win, (int)(key - '0'));
-        return true;
-    }
-    if (key >= VK_NUMPAD0 && key <= VK_NUMPAD9) {
-        ApplyDigitSpeed(win, (int)(key - VK_NUMPAD0));
-        return true;
-    }
-    return false;
-}
-
 void ReadingAutoScrollTick(MainWindow* win) {
     WindowTab* tab = ActiveTab(win);
     if (!tab || tab != SessionTab(win) || tab->autoScroll.paused) {

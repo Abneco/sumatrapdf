@@ -141,36 +141,6 @@ TempStr GetShortcutPathTemp(int csidl) {
     return path::JoinTemp(dir, lnkName);
 }
 
-static bool IsProcessUsingFiles(DWORD procId, Str file1, Str file2) {
-    // Note: don't know why procId 0 shows up as using our files
-    if (procId == 0 || procId == GetCurrentProcessId()) {
-        return false;
-    }
-    if (len(file1) == 0 && len(file2) == 0) {
-        return false;
-    }
-    AutoCloseHandle snap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, procId);
-    if (snap == INVALID_HANDLE_VALUE) {
-        return false;
-    }
-
-    MODULEENTRY32 mod{};
-    mod.dwSize = sizeof(mod);
-    BOOL cont = Module32First(snap, &mod);
-    while (cont) {
-        WCHAR* exePathW = mod.szExePath;
-        TempStr exePath = ToUtf8Temp(exePathW);
-        if (file1 && path::IsSame(file1, exePath)) {
-            return true;
-        }
-        if (file2 && path::IsSame(file2, exePath)) {
-            return true;
-        }
-        cont = Module32Next(snap, &mod);
-    }
-    return false;
-}
-
 constexpr const char* kSearchFilterDllName = "PdfFilter.dll";
 
 void RegisterSearchFilter(bool allUsers, Str installDir) {
@@ -226,7 +196,7 @@ void UnRegisterPreviewer() {
 // Kill a process with given <processId> if it has a module (dll or exe) <modulePath>.
 // If <waitUntilTerminated> is true, will wait until process is fully killed.
 // Returns TRUE if killed a process
-static bool KillProcWithIdAndModule(DWORD processId, Str modulePath, bool waitUntilTerminated) {
+bool KillProcWithIdAndModule(DWORD processId, Str modulePath, bool waitUntilTerminated) {
     if (!IsProcWithModule(processId, modulePath)) {
         return false;
     }
@@ -252,43 +222,12 @@ static bool KillProcWithIdAndModule(DWORD processId, Str modulePath, bool waitUn
     return true;
 }
 
-// returns number of killed processes that have a module (exe or dll) with a given
-// modulePath
-// returns -1 on error, 0 if no matching processes
-int KillProcessesWithModule(Str modulePath, bool waitUntilTerminated) {
-    logf("KillProcessesWithModule: '%s'\n", modulePath);
-    AutoCloseHandle hProcSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-    if (INVALID_HANDLE_VALUE == hProcSnapshot) {
-        return -1;
-    }
-
-    PROCESSENTRY32W pe32;
-    pe32.dwSize = sizeof(pe32);
-    if (!Process32First(hProcSnapshot, &pe32)) {
-        return -1;
-    }
-
-    int killCount = 0;
-    do {
-        if (KillProcWithIdAndModule(pe32.th32ProcessID, modulePath, waitUntilTerminated)) {
-            logf("  killed process with id %d\n", (int)pe32.th32ProcessID);
-            killCount++;
-        }
-    } while (Process32Next(hProcSnapshot, &pe32));
-
-    if (killCount > 0) {
-        UpdateWindow(FindWindow(nullptr, L"Shell_TrayWnd"));
-        UpdateWindow(GetDesktopWindow());
-    }
-    return killCount;
-}
-
 // Kill processes that have any of our install-dir modules loaded:
 // libsumatrapdf.dll, PdfFilter.dll, PdfPreview.dll, SumatraPDF.exe.
 // dllhost/prevhost/SearchFilterHost load the shell-extension DLLs; they may
 // keep PdfFilter.dll locked even after libsumatrapdf.dll was renamed aside.
 // returns false if there are processes and we failed to kill them
-static bool KillProcessesUsingInstallationDir(Str dir) {
+bool KillProcessesUsingInstallationDir(Str dir) {
     logf("KillProcessesUsingInstallationDir('%s')\n", dir);
     if (len(dir) == 0) {
         return true;
@@ -336,11 +275,6 @@ static bool KillProcessesUsingInstallationDir(Str dir) {
         }
     }
     return killedAllProcesses;
-}
-
-static bool KillProcessesUsingInstallation() {
-    TempStr dir = GetExistingInstallationDirTemp();
-    return KillProcessesUsingInstallationDir(dir);
 }
 
 // Unregister PdfFilter/PdfPreview (so Windows Search / Explorer stop loading

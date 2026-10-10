@@ -4854,31 +4854,6 @@ void ExitFullScreen(MainWindow* win) {
 
 static bool gIsDivideKeyDown = false;
 
-// Map a Windows virtual key to a portable selection extend (unit, delta).
-// Returns false if the key is not a selection-extend key.
-static bool TextSelectExtendFromVk(int key, TextSelectUnit& unit, int& delta) {
-    unit = TextSelectUnit::Glyph;
-    delta = 0;
-    switch (key) {
-        case VK_LEFT:
-            delta = -1;
-            return true;
-        case VK_RIGHT:
-            delta = 1;
-            return true;
-        case VK_UP:
-            unit = TextSelectUnit::Line;
-            delta = -1;
-            return true;
-        case VK_DOWN:
-            unit = TextSelectUnit::Line;
-            delta = 1;
-            return true;
-        default:
-            return false;
-    }
-}
-
 // Shift+arrows extend an existing text selection instead of scrolling (#5814).
 static bool TryExtendTextSelectionFromKey(MainWindow* win, int key, bool isCtrl, bool isShift, bool isAlt) {
     if (!win || !isShift || isCtrl || isAlt) {

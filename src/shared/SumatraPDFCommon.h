@@ -146,3 +146,5 @@ struct CreateThumbnailFromFileData {
 };
 
 TempStr PeekNextFileInFolderTemp(MainWindow* win, int* outN, int* outM);
+
+bool TextSelectExtendFromVk(int key, TextSelectUnit& unit, int& delta);

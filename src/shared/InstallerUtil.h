@@ -24,3 +24,9 @@ void RemoveInstallDirFromPath(bool allUsers, Str installDir);
 TempStr GetInstalledExePathTemp();
 Str GetEnvRegKey(bool allUsers);
 bool CopySelfToDir(Str destDir);
+bool KillProcessesUsingInstallation();
+
+// implemented by each app
+bool KillProcWithIdAndModule(DWORD processId, Str modulePath, bool waitUntilTerminated);
+bool KillProcessesUsingInstallationDir(Str dir);
+bool IsProcessUsingFiles(DWORD procId, Str file1, Str file2);

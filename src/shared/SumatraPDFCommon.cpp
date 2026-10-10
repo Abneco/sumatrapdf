@@ -1740,3 +1740,28 @@ TempStr PeekNextFileInFolderTemp(MainWindow* win, int* outN, int* outM) {
     }
     return str::DupTemp(next);
 }
+
+// Map a Windows virtual key to a portable selection extend (unit, delta).
+// Returns false if the key is not a selection-extend key.
+bool TextSelectExtendFromVk(int key, TextSelectUnit& unit, int& delta) {
+    unit = TextSelectUnit::Glyph;
+    delta = 0;
+    switch (key) {
+        case VK_LEFT:
+            delta = -1;
+            return true;
+        case VK_RIGHT:
+            delta = 1;
+            return true;
+        case VK_UP:
+            unit = TextSelectUnit::Line;
+            delta = -1;
+            return true;
+        case VK_DOWN:
+            unit = TextSelectUnit::Line;
+            delta = 1;
+            return true;
+        default:
+            return false;
+    }
+}
