@@ -1501,6 +1501,7 @@
     <ClInclude Include="..\src\shared\InstallerUtil.h" />
     <ClInclude Include="..\src\shared\JxlReader.h" />
     <ClInclude Include="..\src\shared\KeyboardHelp.h" />
+    <ClInclude Include="..\src\shared\KeyboardHelpCommon.h" />
     <ClInclude Include="..\src\shared\LaserPointerCursor.h" />
     <ClInclude Include="..\src\shared\LinkFollow.h" />
     <ClInclude Include="..\src\shared\LitDoc.h" />
@@ -2169,6 +2170,7 @@
     <ClCompile Include="..\src\shared\ImageSaveCropResizeCommon.cpp" />
     <ClCompile Include="..\src\shared\InstallerUtil_win.cpp" />
     <ClCompile Include="..\src\shared\JxlReader.cpp" />
+    <ClCompile Include="..\src\shared\KeyboardHelpCommon.cpp" />
     <ClCompile Include="..\src\shared\LaserPointerCursor_win.cpp" />
     <ClCompile Include="..\src\shared\LinkFollow.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

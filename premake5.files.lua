@@ -367,6 +367,7 @@ function sumatrapdf_files()
     "InstallerUtil_win.cpp",
     "JxlReader.*",
     "KeyboardHelp.*",
+    "KeyboardHelpCommon.*",
     "LinkFollow.*",
     "MainWindow.*",
     "MainWindowCommon.*",

@@ -435,6 +435,9 @@
     <ClInclude Include="..\src\shared\KeyboardHelp.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\KeyboardHelpCommon.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\LaserPointerCursor.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -1269,6 +1272,9 @@
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\JxlReader.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\KeyboardHelpCommon.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\LaserPointerCursor_win.cpp">
