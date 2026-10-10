@@ -117,6 +117,10 @@ void RunWaitSessionRestored(ControlRequest* req);
 bool ParseArg(PacketReader& r, ControlArg** argOut);
 void SnapshotRenderIdle(ControlRequest* req);
 void SnapshotSessionRestore(ControlRequest* req);
+void AddFavoriteSilent(MainWindow* win, int pageNo);
+bool ControlFavoritesMenu(MainWindow* win, Str action, TempStr* idsOut);
+void ControlTogglePresentation(MainWindow* win);
+void ControlToggleFullScreen(MainWindow* win);
 
 #if OS_WIN
 using ControlConn = HANDLE;
@@ -143,3 +147,6 @@ struct LayoutProbeState {
 
 ControlRequest* ReadControlRequest(ControlConn h);
 bool WriteControlResponse(ControlConn h, ControlRequest* req);
+
+TempStr FavoriteNavResultTemp(Str action, int pageNo, int* exitCodeOut);
+TempStr DisplayModeResultTemp(Str action, int* exitCodeOut);

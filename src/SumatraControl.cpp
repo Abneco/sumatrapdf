@@ -137,7 +137,7 @@ static TempStr DpiResultTemp(Str action, int* exitCodeOut) {
 }
 
 // Silent add for -dbg-control tests (no name dialog, no settings flush).
-static void AddFavoriteSilent(MainWindow* win, int pageNo) {
+void AddFavoriteSilent(MainWindow* win, int pageNo) {
     if (!win || !win->IsDocLoaded() || !win->ctrl) {
         return;
     }
@@ -175,128 +175,17 @@ static void AddFavoriteSilent(MainWindow* win, int pageNo) {
 
 // Drive favorites on the already-open document for tests/issue-3744.ts.
 // action: "add" | "goto" | "next" | "prev" | "page". pageNo is used by add/goto.
-static TempStr FavoriteNavResultTemp(Str action, int pageNo, int* exitCodeOut) {
-    str::Builder out;
-    auto finish = [&](Str msg, int code) -> TempStr {
-        out.Append(msg);
-        out.AppendChar('\n');
-        if (exitCodeOut) {
-            *exitCodeOut = code;
-        }
-        return ToStrTemp(out);
-    };
-
-    if (len(gWindows) == 0) {
-        return finish(StrL("NOTREADY no-window"), 2);
-    }
-    MainWindow* win = gWindows[0];
-    if (!win || !win->IsDocLoaded() || !win->ctrl) {
-        return finish(StrL("NOTREADY no-doc"), 2);
-    }
-
-    if (str::EqI(action, StrL("add"))) {
-        if (!win->ctrl->ValidPageNo(pageNo)) {
-            return finish(fmt("ERROR bad-page page=%d", pageNo), 1);
-        }
-        AddFavoriteSilent(win, pageNo);
-    } else if (str::EqI(action, StrL("goto"))) {
-        if (!win->ctrl->ValidPageNo(pageNo)) {
-            return finish(fmt("ERROR bad-page page=%d", pageNo), 1);
-        }
-        win->ctrl->GoToPage(pageNo, true);
-    } else if (str::EqI(action, StrL("goto-fav"))) {
-        if (!win->ctrl->ValidPageNo(pageNo)) {
-            return finish(fmt("ERROR bad-page page=%d", pageNo), 1);
-        }
-        FileState* fs = FileHistoryFindByPath(win->ctrl->GetFilePath());
-        Favorite* fav = nullptr;
-        if (fs && fs->favorites) {
-            for (Favorite* f : *fs->favorites) {
-                if (ParseStoredPagePos(f->pageNo).pageNo == pageNo) {
-                    fav = f;
-                    break;
-                }
-            }
-        }
-        if (!fav) {
-            return finish(fmt("ERROR no-fav page=%d", pageNo), 1);
-        }
-        JumpToFavorite(win, fav);
-    } else if (str::EqI(action, StrL("next"))) {
-        GoToNextFavorite(win, true);
-    } else if (str::EqI(action, StrL("prev"))) {
-        GoToNextFavorite(win, false);
-    } else if (str::EqI(action, StrL("page"))) {
-        // report only
-    } else {
-        return finish(fmt("ERROR unknown-action action=%s", action), 1);
-    }
-
-    int cur = win->ctrl->CurrentPageNo();
-    int y = -1;
-    DisplayModel* dm = win->AsFixed();
-    if (dm) {
-        ScrollState ss = dm->GetScrollState();
-        y = (int)ss.y;
-        cur = ss.page;
-    }
-    return finish(fmt("OK page=%d y=%d", cur, y), 0);
+// orig has no favorites menu ids to report
+bool ControlFavoritesMenu(MainWindow*, Str, TempStr*) {
+    return false;
 }
 
-// action: "get" | "r2l" | "presentation" | "fullscreen"
-// Reports the current page layout and whether presentation / windowed
-// fullscreen is on. presentation/fullscreen toggle that mode first.
-static TempStr DisplayModeResultTemp(Str action, int* exitCodeOut) {
-    str::Builder out;
-    auto finish = [&](Str msg, int code) -> TempStr {
-        out.Append(msg);
-        out.AppendChar('\n');
-        if (exitCodeOut) {
-            *exitCodeOut = code;
-        }
-        return ToStrTemp(out);
-    };
+void ControlTogglePresentation(MainWindow* win) {
+    ToggleFullScreen(win, win->AsFixed() != nullptr);
+}
 
-    if (len(gWindows) == 0) {
-        return finish(StrL("NOTREADY no-window"), 2);
-    }
-    MainWindow* win = gWindows[0];
-    if (!win || !win->IsDocLoaded() || !win->ctrl) {
-        return finish(StrL("NOTREADY no-doc"), 2);
-    }
-
-    bool reportR2L = str::EqI(action, StrL("r2l"));
-    if (str::EqI(action, StrL("zoom-real"))) {
-        return finish(fmt("OK zoomReal=%g", win->ctrl->GetZoomVirtual(true)), 0);
-    }
-    if (len(action) == 0 || str::EqI(action, StrL("get")) || reportR2L) {
-        // report only
-    } else if (str::EqI(action, StrL("presentation"))) {
-        ToggleFullScreen(win, win->AsFixed() != nullptr);
-    } else if (str::EqI(action, StrL("fullscreen"))) {
-        ToggleFullScreen(win, false);
-    } else {
-        return finish(fmt("ERROR unknown-action action=%s", action), 1);
-    }
-
-    if (reportR2L) {
-        DisplayModel* dm = win->AsFixed();
-        if (!dm) {
-            return finish(StrL("ERROR not-fixed-page"), 1);
-        }
-        AppCommandCtx ctx = NewAppCommandCtx(win);
-        bool available =
-            GetCommandVisibility(CmdToggleMangaMode, ctx, CommandSurface::Palette) == CommandVisibility::Show;
-        return finish(fmt("OK r2l=%d available=%d", dm->GetDisplayR2L() ? 1 : 0, available ? 1 : 0), 0);
-    }
-
-    Str mode = DisplayModeToString(win->ctrl->GetDisplayMode());
-    Str zoomLabel;
-    ZoomToString(&zoomLabel, win->ctrl->GetZoomVirtual(false), nullptr);
-    TempStr res = fmt("OK mode=%s presentation=%d fullscreen=%d zoom=%s", mode, win->InPresentation() ? 1 : 0,
-                      win->isFullScreen ? 1 : 0, zoomLabel);
-    str::Free(zoomLabel);
-    return finish(res, 0);
+void ControlToggleFullScreen(MainWindow* win) {
+    ToggleFullScreen(win, false);
 }
 
 // Reports sidebar vs canvas client x positions so tests can check SidebarOnRight.
