@@ -301,16 +301,6 @@ static UINT_PTR menusNoTranslate[] = {
 };
 // clang-format on
 
-static bool CmdIdInList(UINT_PTR cmdId, UINT_PTR* idsList, int n) {
-    for (int i = 0; i < n; i++) {
-        UINT_PTR id = idsList[i];
-        if (id == cmdId) {
-            return true;
-        }
-    }
-    return false;
-}
-
 #define cmdIdInList(name) CmdIdInList(cmdId, name, dimof(name))
 
 static void AddFileMenuItem(HMENU menuFile, const FileHistoryEntry& fe, int index) {

@@ -29,3 +29,5 @@ bool WriteSelectionPixmap(Pixmap* px, Str destPath);
 // implemented by each app
 bool SavePixmapAsImageFile(Pixmap* px, Str path);
 void ShowPdfPageRangeDialog(MainWindow* win, bool isExtract);
+
+bool ExtractTextViaEngine(MainWindow* win, Str destPath, Str pages);

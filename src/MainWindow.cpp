@@ -695,7 +695,7 @@ void LinkHandler::LaunchFile(Str pathOrig, IPageDestination* remoteLink) {
 }
 
 // Select and scroll the ToC tree to tocItem (same idea as GoToTocItem from the palette).
-static void SelectTocItemInTree(MainWindow* win, TocItem* tocItem) {
+void SelectTocItemInTree(MainWindow* win, TocItem* tocItem) {
     if (!win || !tocItem || !win->tocLoaded || !win->tocTreeView) {
         return;
     }
@@ -708,52 +708,6 @@ static void SelectTocItemInTree(MainWindow* win, TocItem* tocItem) {
     }
     treeView->SelectItem((TreeItem)tocItem);
     win->tocKeepSelection = false;
-}
-
-void LinkHandler::GotoNamedDest(Str name) {
-    ReportIf(!win || win->linkHandler != this);
-    DocController* ctrl = win->ctrl;
-    if (!ctrl) {
-        return;
-    }
-
-    // Match order:
-    // 1. Exact match on internal destination name
-    // 2. Fuzzy match on full ToC item title
-    // 3. Fuzzy match on a part of a ToC item title
-    // 4. Exact match on page label
-    IPageDestination* dest = ctrl->GetNamedDest(name);
-    bool hasDest = dest != nullptr;
-    if (dest) {
-        ScrollTo(dest);
-    } else if (ctrl->HasToc()) {
-        auto* docTree = ctrl->GetToc();
-        TocItem* root = docTree->root;
-        TempStr fuzName = NormalizeFuzzyTemp(name);
-        TocItem* tocItem = FindTocItem(root, fuzName, false);
-        if (!tocItem) {
-            tocItem = FindTocItem(root, fuzName, true);
-        }
-        if (tocItem) {
-            dest = tocItem->dest;
-            if (dest) {
-                ScrollTo(dest);
-                hasDest = true;
-            } else if (tocItem->pageNo > 0) {
-                ctrl->GoToPage(tocItem->pageNo, true);
-                hasDest = true;
-            }
-            if (hasDest) {
-                SelectTocItemInTree(win, tocItem);
-            }
-        }
-    }
-    if (!hasDest && ctrl->HasPageLabels()) {
-        int pageNo = ctrl->GetPageByLabel(name);
-        if (ctrl->ValidPageNo(pageNo)) {
-            ctrl->GoToPage(pageNo, true);
-        }
-    }
 }
 
 static void PopulateTabCloseFlags(AppCommandCtx& ctx) {

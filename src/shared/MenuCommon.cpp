@@ -156,3 +156,13 @@ float ZoomMenuItemToZoom(int menuItemId) {
     ReportIf(true);
     return 100.0;
 }
+
+bool CmdIdInList(uintptr_t cmdId, uintptr_t* idsList, int n) {
+    for (int i = 0; i < n; i++) {
+        uintptr_t id = idsList[i];
+        if (id == cmdId) {
+            return true;
+        }
+    }
+    return false;
+}

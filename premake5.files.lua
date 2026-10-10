@@ -414,6 +414,7 @@ function sumatrapdf_files()
     "OverlayScrollbarCommon.*",
     "ExplorerQuickLook.*",
     "Screenshot.*",
+    "ScreenshotCommon.*",
     "ScreenshotCapture.*",
     "SelectTextKeyboard.*",
     "Selection.*",

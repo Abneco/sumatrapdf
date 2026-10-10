@@ -5,3 +5,9 @@
 
 IPageDestination* LaunchLinkAtPopupPt(RefHoverState* s, int clientX, int clientY);
 bool RefHoverIsInternalLink(IPageElement* el, DisplayModel* dm);
+
+// WHEEL_DELTA, the unit RefHoverWheelScroll counts notches in
+constexpr int kWheelDelta = 120;
+
+// implemented by each app
+bool RefHoverPopupShown(RefHoverState* s);

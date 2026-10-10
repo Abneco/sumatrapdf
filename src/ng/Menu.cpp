@@ -234,16 +234,6 @@ static uintptr_t menusNoTranslate[] = {
 
 // clang-format on
 
-static bool CmdIdInList(uintptr_t cmdId, uintptr_t* idsList, int n) {
-    for (int i = 0; i < n; i++) {
-        uintptr_t id = idsList[i];
-        if (id == cmdId) {
-            return true;
-        }
-    }
-    return false;
-}
-
 #define cmdIdInList(name) CmdIdInList((uintptr_t)cmdId, name, dimofi(name))
 
 void DeleteMenuModel(MenuModel* m) {

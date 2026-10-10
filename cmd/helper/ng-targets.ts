@@ -1433,6 +1433,7 @@ export const targets: Target[] = [
       "src/ng/ImageSaveCropResizeCommon.cpp",
       "src/ng/ImageEditHostSumatra.cpp",
       "src/ng/Screenshot.cpp",
+      "src/ng/ScreenshotCommon.cpp",
       "src/ng/PdfTools.cpp",
       "src/ng/PdfToolsCommon.cpp",
       "src/ng/SelectionHandlers.cpp",

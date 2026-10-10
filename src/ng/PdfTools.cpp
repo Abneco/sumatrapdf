@@ -730,40 +730,6 @@ static void PdfBakeDoIt() {
     MessageBoxWarning(win, StrL("Failed to bake PDF file."), Tr("Bake PDF"));
 }
 
-static bool ExtractTextViaEngine(Str destPath, Str pages) {
-    MainWindow* win = gTool.win;
-    if (!win || !win->ctrl) {
-        return false;
-    }
-    DisplayModel* dm = win->ctrl->AsFixed();
-    if (!dm) {
-        return false;
-    }
-    EngineBase* engine = dm->GetEngine();
-    if (!engine) {
-        return false;
-    }
-    int pageCount = engine->PageCount();
-    Vec<PageRange> ranges;
-    if (!ParsePageRanges(pages, ranges)) {
-        return false;
-    }
-    str::Builder text;
-    for (auto& range : ranges) {
-        int start = std::max(range.start, 1);
-        int end = std::min(range.end, pageCount);
-        for (int pageNo = start; pageNo <= end; pageNo++) {
-            PageText pt = engine->ExtractPageText(pageNo);
-            if (pt.text) {
-                text.Append(Str(pt.text.s));
-                text.AppendChar('\n');
-            }
-            FreePageText(&pt);
-        }
-    }
-    return file::WriteFile(destPath, ToStr(text));
-}
-
 static void PdfExtractTextDoIt() {
     TempStr destPath = DestPathTemp();
     if (len(destPath) == 0) {
@@ -788,7 +754,7 @@ static void PdfExtractTextDoIt() {
         ok = muconvert_main(argc, argv) == 0;
     } else {
         // use engine text extraction for other formats (DjVu, etc.)
-        ok = ExtractTextViaEngine(destPath, pages);
+        ok = ExtractTextViaEngine(gTool.win, destPath, pages);
     }
 
     if (ok) {

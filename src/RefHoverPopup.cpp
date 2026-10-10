@@ -187,7 +187,7 @@ void RefHoverShowPopup(RefHoverState* s, Point screenPt) {
 // Positive delta zooms in, negative zooms out. Returns true if the zoom
 // changed and a re-render happened.
 bool RefHoverWheelZoom(RefHoverState* s, EngineBase* engine, int wheelDelta) {
-    if (!s || !s->hwndPopup || s->displayed.destPage <= 0 || !engine) {
+    if (!s || !RefHoverPopupShown(s) || s->displayed.destPage <= 0 || !engine) {
         return false;
     }
     float factor = (wheelDelta > 0) ? kRefHoverUserZoomStep : (1.f / kRefHoverUserZoomStep);
@@ -224,71 +224,8 @@ bool RefHoverWheelZoom(RefHoverState* s, EngineBase* engine, int wheelDelta) {
     return RefHoverRerenderDisplayedRegion(s, engine, s->displayed.destPage, region);
 }
 
-// Scroll the popup's rendered region by a wheel notch. Positive delta scrolls
-// toward earlier content (up); negative scrolls toward later content (down).
-// Rolls over to the previous / next page when the viewport hits a page edge
-// (continuous scrolling). Popup window keeps its initial size; only the
-// rendered region's Y (and possibly page number) changes.
-bool RefHoverWheelScroll(RefHoverState* s, EngineBase* engine, int wheelDelta) {
-    if (!s || !s->hwndPopup || s->displayed.destPage <= 0 || !engine) {
-        return false;
-    }
-    float zoom = s->displayed.baseZoom * s->displayed.userZoom;
-    if (zoom <= 0.f) {
-        return false;
-    }
-    int pageCount = engine->PageCount();
-    int page = s->displayed.destPage;
-    RectF region = s->displayed.region;
-    RectF mediabox = engine->PageMediabox(page);
-    if (mediabox.dx <= 0.f || mediabox.dy <= 0.f) {
-        return false;
-    }
-
-    float scrollStep = (float)DpiScale(kRefHoverScrollStepPx);
-    float scrollPt = scrollStep * ((float)wheelDelta / (float)WHEEL_DELTA) / zoom;
-    float newY = region.y - scrollPt;
-
-    if (newY < 0.f) {
-        if (page > 1) {
-            float overflow = -newY;
-            page--;
-            mediabox = engine->PageMediabox(page);
-            newY = mediabox.dy - region.dy - overflow;
-            newY = std::max(newY, 0.f);
-        } else {
-            newY = 0.f;
-        }
-    } else if (newY + region.dy > mediabox.dy) {
-        if (page < pageCount) {
-            float overflow = (newY + region.dy) - mediabox.dy;
-            page++;
-            mediabox = engine->PageMediabox(page);
-            newY = overflow;
-            if (newY + region.dy > mediabox.dy) {
-                newY = mediabox.dy - region.dy;
-            }
-            newY = std::max(newY, 0.f);
-        } else {
-            newY = mediabox.dy - region.dy;
-            newY = std::max(newY, 0.f);
-        }
-    }
-
-    if (page == s->displayed.destPage && newY == region.y) {
-        return false;
-    }
-    region.y = newY;
-    region.dy = std::min(region.dy, mediabox.dy);
-    if (region.x + region.dx > mediabox.dx) {
-        region.x = mediabox.dx - region.dx;
-        if (region.x < 0.f) {
-            region.x = 0.f;
-            region.dx = mediabox.dx;
-        }
-    }
-
-    return RefHoverRerenderDisplayedRegion(s, engine, page, region);
+bool RefHoverPopupShown(RefHoverState* s) {
+    return s->hwndPopup != nullptr;
 }
 
 // A wheel message meant for the popup: Ctrl + wheel zooms, any other wheel
