@@ -356,6 +356,7 @@ function sumatrapdf_files()
     "GoogleLens.*",
     "HangDetector.*",
     "HomePage.*",
+    "HomePageCommon.*",
     "Installer.*",
     "InstallerCommon.cpp",
     "InstallerUtil.h",

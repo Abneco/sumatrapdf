@@ -1507,6 +1507,7 @@
     <ClInclude Include="..\src\shared\GumboHtmlParser.h" />
     <ClInclude Include="..\src\shared\HangDetector.h" />
     <ClInclude Include="..\src\shared\HomePage.h" />
+    <ClInclude Include="..\src\shared\HomePageCommon.h" />
     <ClInclude Include="..\src\shared\HtmlFormatter.h" />
     <ClInclude Include="..\src\shared\ImageReader.h" />
     <ClInclude Include="..\src\shared\ImageSaveCropResizeCommon.h" />
@@ -2171,6 +2172,7 @@
     <ClCompile Include="..\src\shared\GoogleLens.cpp" />
     <ClCompile Include="..\src\shared\GumboHtmlParser.cpp" />
     <ClCompile Include="..\src\shared\HangDetector.cpp" />
+    <ClCompile Include="..\src\shared\HomePageCommon.cpp" />
     <ClCompile Include="..\src\shared\HtmlFormatter.cpp" />
     <ClCompile Include="..\src\shared\ImageReader.cpp" />
     <ClCompile Include="..\src\shared\ImageSaveCropResizeCommon.cpp" />

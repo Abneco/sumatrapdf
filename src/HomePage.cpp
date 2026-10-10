@@ -39,6 +39,7 @@
 #include "SvgIcons.h"
 #include "PagePosition.h"
 #include "HomePage.h"
+#include "HomePageCommon.h"
 
 // how the shared tip code (TipText.cpp) opens a url link
 static void OpenTipUrl(Str url) {
@@ -135,52 +136,6 @@ static Str promoFromServer;
 
 static void FreeHomeFileIcons();
 
-// the tip markup, one line each; the selected one is parsed by the tip band
-static StrVec gTipLines;
-static StrVec gPromoLines;
-static bool gTipsParsed = false;
-static bool gSelectedIsPromo = false;
-static int gSelectedTipIdx = -1;
-
-static void CollectTipsFromString(Str src, StrVec* out) {
-    StrVec lines;
-    Split(&lines, src, StrL("\n"));
-    for (int i = 0; i < len(lines); i++) {
-        Str line = lines[i];
-        if (str::IsEmptyOrWhiteSpace(line)) {
-            continue;
-        }
-        out->Append(line);
-    }
-}
-
-// the markup of the tip currently on show, {} when there is none
-static Str SelectedTipLine() {
-    if (!gSettings->showTips || gSelectedTipIdx < 0) {
-        return {};
-    }
-    StrVec& v = gSelectedIsPromo ? gPromoLines : gTipLines;
-    if (gSelectedTipIdx >= len(v)) {
-        return {};
-    }
-    if (gSelectedIsPromo) {
-        return v[gSelectedTipIdx];
-    }
-    // translated when shown, so a language change applies without re-parsing
-    return str::JoinTemp(Tr("Tip:"), StrL(" "), Tr(v[gSelectedTipIdx]));
-}
-
-static void PickRandomTipOrPromo() {
-    bool pickPromo = (len(gPromoLines) > 0) && (rand() % 100 < 30);
-    if (pickPromo) {
-        gSelectedIsPromo = true;
-        gSelectedTipIdx = rand() % len(gPromoLines);
-    } else if (len(gTipLines) > 0) {
-        gSelectedIsPromo = false;
-        gSelectedTipIdx = rand() % len(gTipLines);
-    }
-}
-
 static void EnsureTipsParsed() {
     if (gTipsParsed) {
         return;
@@ -202,19 +157,6 @@ void FreeHomePageTips() {
     str::Free(promoFromServer);
     FreeHomeFileIcons();
     HomePageInvalidateLayoutCache();
-}
-
-static void PickAnotherRandomTip() {
-    bool prevIsPromo = gSelectedIsPromo;
-    int prev = gSelectedTipIdx;
-    // keep picking until we get a different one
-    int maxIter = 100;
-    while (maxIter-- > 0) {
-        PickRandomTipOrPromo();
-        if (gSelectedIsPromo != prevIsPromo || gSelectedTipIdx != prev) {
-            return;
-        }
-    }
 }
 
 constexpr Color kAboutBorderCol = kColBlack;
@@ -372,15 +314,6 @@ void SumatraLogo::Paint(VirtPaintCtx& ctx) {
         ctx.gfx->DrawText(letter, {pt.x, pt.y, sz.dx, sz.dy}, 0, font, cols[i % dimofi(cols)]);
         pt.x += sz.dx;
     }
-}
-
-static TempStr TrimGitTemp(Str s) {
-    if (gitCommidId && str::EndsWith(s, gitCommidId)) {
-        int sLen = len(s);
-        int gitLen = len(gitCommidId);
-        return str::DupTemp(Str(s.s, sLen - gitLen - 7));
-    }
-    return s;
 }
 
 // the About screen's virtual controls for one HWND. Positions come from
@@ -1253,23 +1186,6 @@ struct HomeSearchEdit : Edit {
         Edit::WndProc(ev);
     }
 };
-
-// Home-list entries with a path (same set as thumbnails when search is empty).
-static int CountHomePageFiles() {
-    Vec<FileState*> all;
-    if (gSettings && gSettings->homePageSortByFrequentlyRead) {
-        FileHistoryGetFrequencyOrder(all);
-    } else {
-        FileHistoryGetRecentlyOpenedOrder(all);
-    }
-    int n = 0;
-    for (FileState* fs : all) {
-        if (fs && len(fs->filePath) > 0) {
-            n++;
-        }
-    }
-    return n;
-}
 
 // Cue banner when the search field is empty: "Search N files (Ctrl + F)".
 static void UpdateHomeSearchCueBanner(MainWindow* win) {

@@ -1448,6 +1448,7 @@ export const targets: Target[] = [
       "src/ng/DocumentProperties.cpp",
       "src/ng/DocumentPropertiesCommon.cpp",
       "src/ng/HomePage.cpp",
+      "src/ng/HomePageCommon.cpp",
       "src/ng/AddFavoriteDialog.cpp",
       "src/ng/Favorites.cpp",
       "src/ng/FavoritesCommon.cpp",

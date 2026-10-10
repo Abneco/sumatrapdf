@@ -408,6 +408,9 @@
     <ClInclude Include="..\src\shared\HomePage.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\HomePageCommon.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\HtmlFormatter.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -1227,6 +1230,9 @@
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\HangDetector.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\HomePageCommon.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\HtmlFormatter.cpp">

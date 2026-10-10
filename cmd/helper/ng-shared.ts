@@ -130,6 +130,8 @@ export const sharedFiles = [
   "src/shared/FavoritesCommon.cpp",
   "src/shared/FileThumbnailsCommon.cpp",
   "src/shared/FileThumbnailsCommon.h",
+  "src/shared/HomePageCommon.cpp",
+  "src/shared/HomePageCommon.h",
   "src/shared/ImageSaveCropResizeCommon.cpp",
   "src/shared/ImageSaveCropResizeCommon.h",
   "src/shared/InstallerUtil.h",

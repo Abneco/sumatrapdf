@@ -51,6 +51,7 @@
 #include "gui/DialogWidgets.h"
 #include "OverlayScrollbar.h"
 #include "HomePage.h"
+#include "HomePageCommon.h"
 
 #if OS_WIN
 #include <shellapi.h>
@@ -94,51 +95,6 @@ Try [MarkLexis](https://marklexis.arslexis.io): a bookmarking web application.
 
 static Str promoFromServer;
 
-// the tip markup, one line each; the selected one is parsed by the tip band
-static StrVec gTipLines;
-static StrVec gPromoLines;
-static bool gTipsParsed = false;
-static bool gSelectedIsPromo = false;
-static int gSelectedTipIdx = -1;
-
-static void CollectTipsFromString(Str src, StrVec* out) {
-    StrVec lines;
-    Split(&lines, src, StrL("\n"));
-    for (int i = 0; i < len(lines); i++) {
-        Str line = lines[i];
-        if (str::IsEmptyOrWhiteSpace(line)) {
-            continue;
-        }
-        out->Append(line);
-    }
-}
-
-// the markup of the tip currently on show, {} when there is none
-static Str SelectedTipLine() {
-    if (!gSettings->showTips || gSelectedTipIdx < 0) {
-        return {};
-    }
-    StrVec& v = gSelectedIsPromo ? gPromoLines : gTipLines;
-    if (gSelectedTipIdx >= len(v)) {
-        return {};
-    }
-    if (gSelectedIsPromo) {
-        return v[gSelectedTipIdx];
-    }
-    return str::JoinTemp(Tr("Tip:"), StrL(" "), Tr(v[gSelectedTipIdx]));
-}
-
-static void PickRandomTipOrPromo() {
-    bool pickPromo = (len(gPromoLines) > 0) && (rand() % 100 < 30);
-    if (pickPromo) {
-        gSelectedIsPromo = true;
-        gSelectedTipIdx = rand() % len(gPromoLines);
-    } else if (len(gTipLines) > 0) {
-        gSelectedIsPromo = false;
-        gSelectedTipIdx = rand() % len(gTipLines);
-    }
-}
-
 static void EnsureTipsParsed() {
     if (gTipsParsed) {
         return;
@@ -161,19 +117,6 @@ void FreeHomePageTips() {
     str::Free(promoFromServer);
     promoFromServer = {};
     HomePageInvalidateLayoutCache();
-}
-
-static void PickAnotherRandomTip() {
-    bool prevIsPromo = gSelectedIsPromo;
-    int prev = gSelectedTipIdx;
-    // keep picking until we get a different one
-    int maxIter = 100;
-    while (maxIter-- > 0) {
-        PickRandomTipOrPromo();
-        if (gSelectedIsPromo != prevIsPromo || gSelectedTipIdx != prev) {
-            return;
-        }
-    }
 }
 
 void PickAnotherRandomPromotion() {
@@ -230,15 +173,6 @@ constexpr Color kCol2 = MkRgb(227, 107, 35);
 constexpr Color kCol3 = MkRgb(93, 160, 40);
 constexpr Color kCol4 = MkRgb(69, 132, 190);
 constexpr Color kCol5 = MkRgb(112, 115, 207);
-
-static TempStr TrimGitTemp(Str s) {
-    if (gitCommidId && str::EndsWith(s, gitCommidId)) {
-        int sLen = len(s);
-        int gitLen = len(gitCommidId);
-        return str::DupTemp(Str(s.s, sLen - gitLen - 7));
-    }
-    return s;
-}
 
 // Version, OS, memory and similar facts for a bug report.
 static void AppendBugReportInfo(str::Builder& s) {
@@ -625,23 +559,6 @@ static void CollectHomePageFiles(MainWindow* win, Vec<FileState*>& fileStates, S
         }
         VecAppend(fileStates, fs);
     }
-}
-
-// Home-list entries with a path (same set as thumbnails when search is empty).
-static int CountHomePageFiles() {
-    Vec<FileState*> all;
-    if (gSettings && gSettings->homePageSortByFrequentlyRead) {
-        FileHistoryGetFrequencyOrder(all);
-    } else {
-        FileHistoryGetRecentlyOpenedOrder(all);
-    }
-    int n = 0;
-    for (FileState* fs : all) {
-        if (fs && len(fs->filePath) > 0) {
-            n++;
-        }
-    }
-    return n;
 }
 
 // --- the view ----------------------------------------------------------------
