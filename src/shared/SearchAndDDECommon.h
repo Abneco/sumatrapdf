@@ -84,3 +84,26 @@ void RebuildFindMatchPaintCache(MainWindow* win, DisplayModel* dm, int firstPage
 
 // implemented by each app
 bool HandleExecuteCmds(HWND hwnd, Str cmd);
+
+struct OpenManyCopyDataAsync {
+    StrVec paths;
+    HWND hwnd;
+    u32 newWindow;
+};
+
+// Payload for async Open command carried in kCopyDataOpen WM_COPYDATA
+struct OpenCopyDataAsync {
+    Str path; // heap-allocated, freed by OpenCopyDataAsyncRun
+    u32 newWindow;
+};
+
+// streaming partial results to the floating results list while the scan runs:
+// first batch after kFindResultsFirstBatch matches, then a batch only when
+// both kFindResultsBatch new matches accumulated and kFindResultsBatchMs
+// passed since the last one (avoids flooding the UI thread for common words)
+constexpr int kFindResultsFirstBatch = 16;
+
+// Chrome-style orange for the non-active find matches. The active (current)
+// match uses the user-customizable FixedPageUI.SelectionColor instead, so it
+// stands out with the color the user finds most noticeable (issue #5740).
+constexpr Color kFindOtherMatchColor = MkRgb(0xff, 0x96, 0x32);

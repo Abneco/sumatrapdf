@@ -45,11 +45,6 @@ static bool IsAppFrame(HWND hwnd) {
     return false;
 }
 
-TempStr GetScreenshotSaveDirTemp() {
-    TempStr dataDir = GetAppDataDirTemp();
-    return path::JoinTemp(dataDir, StrL("Screenshots"));
-}
-
 static HWND GetScreenshotOwnerHwnd() {
     return len(gWindows) > 0 ? gWindows[0]->hwndFrame : nullptr;
 }

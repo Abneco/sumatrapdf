@@ -78,11 +78,6 @@ void RememberFindQuery(Str q) {
     }
 }
 
-// Chrome-style orange for the non-active find matches. The active (current)
-// match uses the user-customizable FixedPageUI.SelectionColor instead, so it
-// stands out with the color the user finds most noticeable (issue #5740).
-constexpr Color kFindOtherMatchColor = MkRgb(0xff, 0x96, 0x32);
-
 static Kind kNotifFindProgress = "findProgress";
 
 // update the find bar's "n / m" status (and the results list selection) from
@@ -695,11 +690,6 @@ static void CountProgress(CountThreadData* d, ProgressUpdateData* data) {
     uitask::Post(MkFunc0<CountProgressTaskData>(CountProgressTask, pd), "TaskFindCountProgress");
 }
 
-// streaming partial results to the floating results list while the scan runs:
-// first batch after kFindResultsFirstBatch matches, then a batch only when
-// both kFindResultsBatch new matches accumulated and kFindResultsBatchMs
-// passed since the last one (avoids flooding the UI thread for common words)
-constexpr int kFindResultsFirstBatch = 16;
 constexpr int kFindResultsBatch = 100;
 constexpr DWORD kFindResultsBatchMs = 500;
 
@@ -2176,18 +2166,6 @@ LRESULT OnDDETerminate(HWND hwnd, WPARAM wp, LPARAM /*lp*/) {
     PostMessageW((HWND)wp, WM_DDE_TERMINATE, (WPARAM)hwnd, 0L);
     return 0;
 }
-
-// Payload for async Open command carried in kCopyDataOpen WM_COPYDATA
-struct OpenCopyDataAsync {
-    Str path; // heap-allocated, freed by OpenCopyDataAsyncRun
-    u32 newWindow;
-};
-
-struct OpenManyCopyDataAsync {
-    StrVec paths;
-    HWND hwnd;
-    u32 newWindow;
-};
 
 static void OpenManyCopyDataAsyncRun(OpenManyCopyDataAsync* d) {
     MainWindow* win = nullptr;

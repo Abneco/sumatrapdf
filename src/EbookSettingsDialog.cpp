@@ -34,17 +34,6 @@
 // engine generates from those values is shown read-only; "Custom CSS" hands
 // the user the pen instead, and then what they type *is* the user CSS.
 
-// what the controls hold, ready to be written to a settings struct
-struct EbookVals {
-    Str fontName; // not owned, points into the controls' temp strings
-    float fontSize = 0;
-    Vec<float> margin; // 1, 2 or 4 values; empty means unset
-    float lineSpacing = 0;
-    bool ignoreDocumentCSS = false;
-    Str customCSS; // not owned; empty unless useCustomCSS
-    bool useCustomCSS = false;
-};
-
 struct EbookSettingsWnd : WindowBase {
     ~EbookSettingsWnd() override;
 

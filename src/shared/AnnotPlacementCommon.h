@@ -32,3 +32,15 @@ bool PlacePointAnnotationAt(MainWindow* win, Point pt);
 // implemented by each app
 void CommitPlacementCommand(MainWindow* win, Point pt);
 void SetPlacementCursor(MainWindow* win);
+
+// Free text is placed like a stamp: a preview box the size of the annotation
+// follows the cursor and a click creates it there. MuPDF lays free text out
+// with padding = 2 * border width, a 1.2 * font size line height and a
+// 0.8 * font size baseline (pdf_write_free_text_appearance), so a box that
+// fits one line of the placeholder text is that tall.
+constexpr float kFreeTextLineHeight = 1.2f;
+
+// MuPDF's default stamp is {12,12,12+190,12+50}; caret is {12,12,12+18,12+15}
+// with the caret mark at the middle of the left edge; file attachment is
+// {12,12,12+16,12+16}.
+constexpr float kStampAnnotDefaultDx = 190.f;

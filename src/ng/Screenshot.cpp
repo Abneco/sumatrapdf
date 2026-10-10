@@ -51,11 +51,6 @@
 
 static Kind kNotifScreenshot = "notifScreenshot";
 
-TempStr GetScreenshotSaveDirTemp() {
-    TempStr dataDir = GetAppDataDirTemp();
-    return path::JoinTemp(dataDir, StrL("Screenshots"));
-}
-
 // --- rendering a page region (orig's PdfTools RenderSelectionPixmap) --------
 
 constexpr float kScreenshotDpi = 150;

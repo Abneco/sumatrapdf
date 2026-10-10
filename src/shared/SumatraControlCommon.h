@@ -128,3 +128,9 @@ void SumatraControlThread(ControlThreadArg* arg);
 // implemented by each app
 bool ProcessControlConnection(HANDLE h);
 #endif
+
+struct LayoutProbeState {
+    MainWindow* win = nullptr;
+    int count = 0;
+    bool active = false;
+};

@@ -21,6 +21,7 @@
 #include "gui/DialogWidgets.h"
 #include "HomePage.h"
 #include "OverlayScrollbar.h"
+#include "OverlayScrollbarCommon.h"
 
 bool gOverlayScrollbarSuppressThick = false;
 
@@ -33,8 +34,6 @@ static OverlayScrollbar* gCapture = nullptr;
 static constexpr int kMinThumbSize = 20;
 static constexpr u8 kAlphaThin = 180;
 static constexpr u8 kAlphaThick = 220;
-
-using State = OverlayScrollbar::State;
 
 // ng: win32's MulDiv (a * b / c, rounded) for a positive c; the other
 // platforms have none
@@ -59,39 +58,13 @@ static bool IsLive(OverlayScrollbar* sb) {
     return false;
 }
 
-static bool IsThick(OverlayScrollbar* sb) {
-    return sb->state == State::SmartThick || sb->state == State::AlwaysThick;
-}
-
-static bool IsVisible(OverlayScrollbar* sb) {
-    return sb->state == State::SmartThin || sb->state == State::SmartThick || sb->state == State::AlwaysThick;
-}
-
-// scrollbar is active: shown or auto-hidden but ready to appear
-static bool IsActive(OverlayScrollbar* sb) {
-    return sb->state != State::Hidden;
-}
-
 // ng: the modes that never hide and never go thin
 static bool IsAlwaysThickMode(OverlayScrollbar* sb) {
     return sb->mode == OverlayScrollbar::Mode::Thick || sb->mode == OverlayScrollbar::Mode::Windows;
 }
 
-static int ScaledWidth(OverlayScrollbar* sb, bool thick) {
-    return thick ? sb->thickWidth : sb->thinWidth;
-}
-
-static bool IsVert(OverlayScrollbar* sb) {
-    return sb->type == OverlayScrollbar::Type::Vert;
-}
-
 bool IsOverlayScrollbarThick(OverlayScrollbar* sb) {
     return sb && IsThick(sb);
-}
-
-// returns true if scrollbar is visible (thin, thick, or always thick)
-bool IsOverlayScrollbarVisible(OverlayScrollbar* sb) {
-    return sb && IsVisible(sb);
 }
 
 int OverlayScrollbarWidth(OverlayScrollbar* sb) {
@@ -434,22 +407,6 @@ bool OverlayScrollbarTick(OverlayScrollbar* sb, int elapsedMs, bool ownerActive)
         }
     }
     return was != sb->state;
-}
-
-// Derive scrollbar colors from current theme
-static Color ThemeTrackColor() {
-    Color bg = ThemeControlBackgroundColor();
-    return bg;
-}
-
-static Color ThemeThumbColor() {
-    Color bg = ThemeControlBackgroundColor();
-    return AccentColor(bg, 100);
-}
-
-static Color ThemeThumbHoverColor() {
-    Color bg = ThemeControlBackgroundColor();
-    return AccentColor(bg, 140);
 }
 
 static gp::Rgba WithAlpha(Color c, u8 a) {

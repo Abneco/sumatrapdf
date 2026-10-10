@@ -45,6 +45,7 @@
 #include "gui/ToolWindow.h"
 #include "AnnotEditToolbar.h"
 #include "AnnotFilterToolbar.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -391,10 +392,6 @@ static void ResetListState(AnnotFilterToolbar* f) {
     f->anchor = -1;
     VecReset(f->selected);
     f->scrollY = 0;
-}
-
-static bool IsListNavKey(int vkey) {
-    return vkey == VK_UP || vkey == VK_DOWN || vkey == VK_PRIOR || vkey == VK_NEXT || vkey == VK_HOME || vkey == VK_END;
 }
 
 // orig's VirtListBox::OnKeyDown
@@ -769,12 +766,6 @@ void UpdateAnnotFilterToolbar(MainWindow* win) {
     }
     if (f->visible) {
         AppShellInvalidate(win);
-    }
-}
-
-static void PostedRefreshAnnots(MainWindow* win) {
-    if (IsMainWindowValidAndNotClosing(win)) {
-        RefreshAnnotFilterAnnotations(win);
     }
 }
 

@@ -3,3 +3,7 @@
 int CalcPerc(int current, int total);
 void ShowLazyLayoutNotif(DisplayModel* dm, Str msg);
 void ShowChapterLayoutNotif(DisplayModel* dm, Str msg, bool finished);
+
+// --- shared by NotificationsCommon.cpp and each app's Notifications.cpp ---
+
+extern bool gNotificationsEnabled;

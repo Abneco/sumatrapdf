@@ -18,3 +18,14 @@ struct TabColorTarget {
 void TabColorPicked(TabColorTarget* target, ChangeColorsArgs* args);
 
 Color BlendOver(Color col, Color bg, u8 a);
+
+static const Color kBgPresetColors[] = {
+    kColorUnset,
+    kColBlack,
+    kColWhite,
+};
+
+enum class CloseAction {
+    Cancel,
+    Select
+};

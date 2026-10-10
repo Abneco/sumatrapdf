@@ -40,10 +40,6 @@
 #include "AnnotPlacementCommon.h"
 #include "AnnotPlacementCursors.h"
 
-// MuPDF's default stamp is {12,12,12+190,12+50}; caret is {12,12,12+18,12+15}
-// with the caret mark at the middle of the left edge; file attachment is
-// {12,12,12+16,12+16}.
-constexpr float kStampAnnotDefaultDx = 190.f;
 constexpr float kStampAnnotDefaultDy = 50.f;
 constexpr float kCaretAnnotDefaultDx = 18.f;
 constexpr float kCaretAnnotDefaultDy = 15.f;
@@ -56,12 +52,6 @@ constexpr int kInkEraserRadiusPx = 10;
 // stroke is comes from its color's alpha.
 constexpr Color kInkDefaultColor = 0x6600ffff;
 
-// Free text is placed like a stamp: a preview box the size of the annotation
-// follows the cursor and a click creates it there. MuPDF lays free text out
-// with padding = 2 * border width, a 1.2 * font size line height and a
-// 0.8 * font size baseline (pdf_write_free_text_appearance), so a box that
-// fits one line of the placeholder text is that tall.
-constexpr float kFreeTextLineHeight = 1.2f;
 // MeasureString already includes generous side bearings; a little more keeps
 // MuPDF from wrapping the text we previewed on a single line
 constexpr float kFreeTextWidthSlack = 1.02f;

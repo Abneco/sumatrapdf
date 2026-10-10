@@ -31,6 +31,7 @@
 #include "gui/DialogWidgets.h"
 #include "gui/ToolWindow.h"
 #include "SumatraDialogs.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -461,7 +462,7 @@ static void ChangeThemeOpenToolWindow(MainWindow* win) {
     gChangeTheme.tw = ToolWindowOpen(desc, win, r);
 }
 
-static void ShowThemeDialog(MainWindow* win, bool documentColorsFollowThemeOnly) {
+void ShowThemeDialog(MainWindow* win, bool documentColorsFollowThemeOnly) {
     if (!HasPermission(Perm::SavePreferences) || !IsMainWindowValidAndNotClosing(win)) {
         return;
     }
@@ -491,14 +492,6 @@ static void ShowThemeDialog(MainWindow* win, bool documentColorsFollowThemeOnly)
     ChangeThemeOpenToolWindow(win);
     ScrollSelIntoView();
     AppShellInvalidate(win);
-}
-
-void ShowChangeThemeDialog(MainWindow* win) {
-    ShowThemeDialog(win, false);
-}
-
-void ShowSetDocumentColorsFollowThemeDialog(MainWindow* win) {
-    ShowThemeDialog(win, true);
 }
 
 gp::El* ChangeThemeDialogBuild(MainWindow* win, gp::Ctx* cx) {

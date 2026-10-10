@@ -58,27 +58,6 @@ struct AnnotTextPopup {
     }
 };
 
-static Color PopupBg() {
-    return ThemeNotificationsBackgroundColor();
-}
-
-static Color PopupText() {
-    return ThemeNotificationsTextColor();
-}
-
-// the date is secondary information: same hue, less contrast
-static Color PopupMutedText() {
-    float units = IsLightColor(PopupBg()) ? 55.0f : -55.0f;
-    return AdjustLightness2(PopupText(), units);
-}
-
-// the rule under the header: a mid-tone that reads on both a light and a dark
-// card (the window edge color is nearly invisible on white)
-static Color PopupRuleColor() {
-    float units = IsLightColor(PopupBg()) ? 190.0f : -190.0f;
-    return AdjustLightness2(PopupText(), units);
-}
-
 bool IsAnnotationTextPopupShown(MainWindow* win) {
     AnnotTextPopup* p = win ? win->annotTextPopup : nullptr;
     return p && p->annot != nullptr;

@@ -498,14 +498,6 @@ static void OnAIChatUpdate(AIChatUpdateData* data) {
     AppShellInvalidate(win);
 }
 
-// When set (only during a headless RunAIChatSync), provider updates are
-// collected here instead of being posted to a webview: there's no window, and
-// the message loop isn't pumping while the test blocks on the pipe.
-struct AIChatCaptureSink {
-    str::Builder text;
-    str::Builder err;
-    bool finished = false;
-};
 static AIChatCaptureSink* gAIChatCapture = nullptr;
 
 void AIChatPostUpdate(AIChatStreamCtx* ctx, AIChatUpdateType type, Str text) {

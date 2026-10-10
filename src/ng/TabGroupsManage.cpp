@@ -37,11 +37,6 @@
 
 #include "SumatraLog.h"
 
-enum class TabGroupDialogMode {
-    Save,
-    Open,
-};
-
 struct TabGroupsDlg {
     MainWindow* win = nullptr;
     bool visible = false;
@@ -167,7 +162,7 @@ void CloseTabGroupsDialog() {
     }
 }
 
-static void ShowTabGroupsDialog(MainWindow* win, TabGroupDialogMode mode) {
+void ShowTabGroupsDialog(MainWindow* win, TabGroupDialogMode mode) {
     if (!IsMainWindowValidAndNotClosing(win)) {
         return;
     }
@@ -196,14 +191,6 @@ static void ShowTabGroupsDialog(MainWindow* win, TabGroupDialogMode mode) {
     }
     TabGroupsOpenToolWindow(win);
     AppShellInvalidate(win);
-}
-
-void ShowSaveTabGroupDialog(MainWindow* win) {
-    ShowTabGroupsDialog(win, TabGroupDialogMode::Save);
-}
-
-void ShowOpenTabGroupDialog(MainWindow* win) {
-    ShowTabGroupsDialog(win, TabGroupDialogMode::Open);
 }
 
 // the windows of every main window list the same groups

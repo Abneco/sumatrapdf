@@ -162,6 +162,8 @@ export const sharedFiles = [
   "src/shared/OleDragDropCommon_win.cpp",
   "src/shared/OpenFileFilters.h",
   "src/shared/OpenFileFilters_win.cpp",
+  "src/shared/OverlayScrollbarCommon.cpp",
+  "src/shared/OverlayScrollbarCommon.h",
   "src/shared/PageGridDialogCommon.cpp",
   "src/shared/PageGridDialogCommon.h",
   "src/shared/PdfToolsCommon.cpp",

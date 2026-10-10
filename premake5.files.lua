@@ -411,6 +411,7 @@ function sumatrapdf_files()
     "SearchAndDDE.*",
     "SearchAndDDECommon.*",
     "OverlayScrollbar.*",
+    "OverlayScrollbarCommon.*",
     "ExplorerQuickLook.*",
     "Screenshot.*",
     "ScreenshotCapture.*",

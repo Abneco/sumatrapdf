@@ -94,3 +94,17 @@ static const struct {
     {CmdFavoriteAdd, "Ctrl + B"}, {CmdHelpOpenManual, "F1"}, {CmdToggleKeyboardHelp, "?"},
 };
 // clang-format on
+
+struct SumatraKeyboardHelpDataSource : KeyboardHelpDataSource {
+    Str Translate(Str s) override { return trans::GetTranslation(s); }
+
+    TempStr CommandDescriptionTemp(int cmdId) override {
+        Str description = GetCommandDescription(cmdId);
+        if (len(description) == 0) {
+            return {};
+        }
+        return str::DupTemp(trans::GetTranslation(description));
+    }
+
+    TempStr CommandShortcutTemp(int cmdId, int maxCount) override { return ShortcutsForCmdTemp(cmdId, maxCount); }
+};

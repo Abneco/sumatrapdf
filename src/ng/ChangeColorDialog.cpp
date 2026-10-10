@@ -38,12 +38,6 @@
 #include "SumatraLog.h"
 
 static const int kNumPresets = 3;
-static const Color kBgPresetColors[] = {
-    kColorUnset,
-    kColBlack,
-    kColWhite,
-};
-
 // custom swatches are laid out in 2 rows
 static const int kCustomInRow1 = 5;
 
@@ -51,11 +45,6 @@ static const Color kColCheckerDark = MkRgb(204, 204, 204);
 
 // the client width of orig's window
 constexpr float kColorWinDx = 400;
-
-enum class CloseAction {
-    Cancel,
-    Select
-};
 
 struct ChangeColorDlg {
     MainWindow* win = nullptr;

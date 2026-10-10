@@ -31,6 +31,7 @@
 #include "Theme.h"
 #include "Translations.h"
 #include "ImageSaveCropResize.h"
+#include "AppHelpersCommon.h"
 
 extern "C" {
 #include "mupdf/fitz.h"
@@ -303,10 +304,6 @@ static void OpenSavedFile(MainWindow* parent, Str path) {
         return;
     }
     LoadDocument(win, path);
-}
-
-static Str TranslateStr(Str s) {
-    return Tr(s);
 }
 
 // fills the hooks above in with SumatraPDF's implementations

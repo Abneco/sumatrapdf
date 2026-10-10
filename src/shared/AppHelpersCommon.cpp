@@ -3,6 +3,9 @@
 
 #include "base/Base.h"
 #include "base/File.h"
+#if defined(SUMATRA_NG)
+#include "VirtKeys.h"
+#endif
 
 #include "gui/UIModels.h"
 
@@ -17,6 +20,10 @@
 #include "Theme.h"
 #include "SumatraPDF.h"
 #include "MainWindow.h"
+#include "AppTools.h"
+#include "AnnotFilterToolbar.h"
+#include "FindBar.h"
+#include "FindWindow.h"
 #include "AppHelpersCommon.h"
 
 // One-off helpers that orig and ng both need and that have no shared file of
@@ -126,4 +133,75 @@ Str SelectIfChildOf(Str cameFrom, Str dir) {
         return {};
     }
     return cameFrom;
+}
+
+bool IsListNavKey(int vkey) {
+    return vkey == VK_UP || vkey == VK_DOWN || vkey == VK_PRIOR || vkey == VK_NEXT || vkey == VK_HOME || vkey == VK_END;
+}
+
+void PostedRefreshAnnots(MainWindow* win) {
+    if (IsMainWindowValidAndNotClosing(win)) {
+        RefreshAnnotFilterAnnotations(win);
+    }
+}
+
+Color PopupBg() {
+    return ThemeNotificationsBackgroundColor();
+}
+
+Color PopupText() {
+    return ThemeNotificationsTextColor();
+}
+
+// the date is secondary information: same hue, less contrast
+Color PopupMutedText() {
+    float units = IsLightColor(PopupBg()) ? 55.0f : -55.0f;
+    return AdjustLightness2(PopupText(), units);
+}
+
+// the rule under the header: a mid-tone that reads on both a light and a dark
+// card (the window edge color is nearly invisible on white)
+Color PopupRuleColor() {
+    float units = IsLightColor(PopupBg()) ? 190.0f : -190.0f;
+    return AdjustLightness2(PopupText(), units);
+}
+
+// "ShowFindBar" is the entry point used by FindFirst/Ctrl+F; it shows whichever
+// find UI the user has chosen (compact overlay or floating window)
+void ShowFindBar(MainWindow* win) {
+    if (gSettings->searchUIFloating) {
+        ShowFindWindow(win);
+        return;
+    }
+    ShowCompactBar(win);
+}
+
+// true if either the compact bar or the floating find window is visible
+bool IsFindUIVisible(MainWindow* win) {
+    return IsFindBarVisible(win) || IsFindWindowVisible(win);
+}
+
+Str TranslateStr(Str s) {
+    return Tr(s);
+}
+
+TempStr GetScreenshotSaveDirTemp() {
+    TempStr dataDir = GetAppDataDirTemp();
+    return path::JoinTemp(dataDir, StrL("Screenshots"));
+}
+
+void ShowChangeThemeDialog(MainWindow* win) {
+    ShowThemeDialog(win, false);
+}
+
+void ShowSetDocumentColorsFollowThemeDialog(MainWindow* win) {
+    ShowThemeDialog(win, true);
+}
+
+void ShowSaveTabGroupDialog(MainWindow* win) {
+    ShowTabGroupsDialog(win, TabGroupDialogMode::Save);
+}
+
+void ShowOpenTabGroupDialog(MainWindow* win) {
+    ShowTabGroupsDialog(win, TabGroupDialogMode::Open);
 }

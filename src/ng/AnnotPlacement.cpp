@@ -44,10 +44,6 @@
 
 #include "SumatraLog.h"
 
-// MuPDF's default stamp is {12,12,12+190,12+50}; caret is {12,12,12+18,12+15}
-// with the caret mark at the middle of the left edge; file attachment is
-// {12,12,12+16,12+16}.
-constexpr float kStampAnnotDefaultDx = 190.f;
 constexpr float kStampAnnotDefaultDy = 50.f;
 constexpr float kCaretAnnotDefaultDx = 18.f;
 constexpr float kCaretAnnotDefaultDy = 15.f;
@@ -60,11 +56,6 @@ constexpr int kInkEraserRadiusPx = 10;
 // stroke is comes from its color's alpha.
 constexpr Color kInkDefaultColor = 0x6600ffff;
 
-// Free text is placed like a stamp: a preview box the size of the annotation
-// follows the cursor and a click creates it there. MuPDF lays free text out
-// with padding = 2 * border width and a 1.2 * font size line height
-// (pdf_write_free_text_appearance), so a box that fits one line is that tall.
-constexpr float kFreeTextLineHeight = 1.2f;
 // ng: orig measures the placeholder with GDI+ Arial (Helvetica's metrics).
 // There is no portable text measurement outside a paint, so the box is as wide
 // as the average Helvetica advance makes it.

@@ -161,20 +161,6 @@ static void ProbeImageFormats() {
     pFactory->Release();
 }
 
-enum class DragEdge {
-    None,
-    Left,
-    Right,
-    Top,
-    Bottom,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-    Move,   // only used in crop mode
-    NewCrop // only used in crop mode
-};
-
 // a button labelled "&Save": virtual controls draw their text as-is, so the
 // '&' is stripped for the label and kept here as the Alt- shortcut
 struct ImageEditButton : VirtButton {

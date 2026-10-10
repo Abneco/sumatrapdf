@@ -159,11 +159,6 @@ constexpr int kMaxNotifs = 128;
 static NotificationWnd* gNotifs[kMaxNotifs];
 static int gNotifsCount = 0;
 
-// Notifications are drawn over the document and stay for a couple of seconds.
-// A test that reads pixels has to wait them out (which is most of the runtime
-// of e.g. tests/issue-1195.ts), so -dbg-control can switch them off.
-static bool gNotificationsEnabled = true;
-
 static int GetForHwnd(HWND hwnd, NotificationWnd* wnds[kMaxNotifs]) {
     int n = 0;
     for (int i = 0; i < gNotifsCount; i++) {
@@ -912,10 +907,6 @@ void CloseNotification(NotificationWnd* wnd) {
         return;
     }
     wnd->ScheduleRemove(NotifCloseReason::Program);
-}
-
-bool AreNotificationsEnabled() {
-    return gNotificationsEnabled;
 }
 
 // Turning them off also takes down the ones already on screen, so a test can

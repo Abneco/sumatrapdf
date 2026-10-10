@@ -22,6 +22,7 @@
 #include "DarkMode.h"
 #include "PdfDarkMode.h"
 #include "SumatraDialogs.h"
+#include "AppHelpersCommon.h"
 
 // The theme list, the label and the buttons are virtual controls (VirtCtrl);
 // only the drop-down is a real HWND. They all sit in the same layout tree,
@@ -341,7 +342,7 @@ bool ChangeThemeWnd::Create(MainWindow* mainWin) {
     return true;
 }
 
-static void ShowThemeDialog(MainWindow* win, bool documentColorsFollowThemeOnly) {
+void ShowThemeDialog(MainWindow* win, bool documentColorsFollowThemeOnly) {
     if (!HasPermission(Perm::SavePreferences)) {
         return;
     }
@@ -362,12 +363,4 @@ static void ShowThemeDialog(MainWindow* win, bool documentColorsFollowThemeOnly)
         return;
     }
     gChangeThemeWnd = wnd;
-}
-
-void ShowChangeThemeDialog(MainWindow* win) {
-    ShowThemeDialog(win, false);
-}
-
-void ShowSetDocumentColorsFollowThemeDialog(MainWindow* win) {
-    ShowThemeDialog(win, true);
 }

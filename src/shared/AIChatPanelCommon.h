@@ -22,3 +22,13 @@ WindowTab* FindAIChatUpdateTab(MainWindow* win, int pid, Str sessionId);
 void WebViewEval(MainWindow* win, Str js, bool record = true);
 void UpdateAIChatPanelForCurrentTab(MainWindow* win);
 bool RunAIChatSync(AIChatBackend backend, Str filePath, Str message, Str& outText, Str& outErr);
+
+// post an update to be applied on the UI thread (implemented in AIChatPanel.cpp)
+// When set (only during a headless RunAIChatSync), provider updates are
+// collected here instead of being posted to a webview: there's no window, and
+// the message loop isn't pumping while the test blocks on the pipe.
+struct AIChatCaptureSink {
+    str::Builder text;
+    str::Builder err;
+    bool finished = false;
+};

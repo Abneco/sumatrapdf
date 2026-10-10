@@ -477,6 +477,9 @@
     <ClInclude Include="..\src\shared\OleDragDropCommon.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\OverlayScrollbarCommon.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\PageGridDialogCommon.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -1320,6 +1323,9 @@
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\OpenFileFilters_win.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\OverlayScrollbarCommon.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\PageGridDialogCommon.cpp">

@@ -39,6 +39,7 @@
 #include "DarkMode.h"
 
 #include "AnnotFilterToolbar.h"
+#include "AppHelpersCommon.h"
 
 constexpr const WCHAR* kAnnotFilterListClassName = L"SumatraAnnotFilterList";
 constexpr const WCHAR* kAnnotFilterFloatClassName = L"SUMATRA_ANNOT_FILTER_WND";
@@ -59,7 +60,6 @@ static AnnotFilterToolbar* GetOrCreate(MainWindow*);
 static void ShowAnnotFilterWindow(MainWindow*);
 static void HideAnnotFilterWindow(MainWindow*);
 static bool FilterHomeEndMovesList(AnnotFilterToolbar*, int vkey, bool isCtrl);
-static bool IsListNavKey(int vkey);
 static void KillSelectionTimer(AnnotFilterToolbar*);
 static void UpdateFloatButtons(AnnotFilterToolbar*);
 
@@ -107,10 +107,6 @@ struct AnnotFilterToolbar {
     int selEpoch = 0;
     int applyEpoch = 0;
 };
-
-static bool IsListNavKey(int vkey) {
-    return vkey == VK_UP || vkey == VK_DOWN || vkey == VK_PRIOR || vkey == VK_NEXT || vkey == VK_HOME || vkey == VK_END;
-}
 
 static WindowTab* FilterTab(AnnotFilterToolbar* f) {
     return f && f->win ? f->win->CurrentTab() : nullptr;
@@ -1090,12 +1086,6 @@ void UpdateAnnotFilterToolbar(MainWindow* win) {
     }
     UpdateCue(f);
     UpdateFloatButtons(f);
-}
-
-static void PostedRefreshAnnots(MainWindow* win) {
-    if (IsMainWindowValidAndNotClosing(win)) {
-        RefreshAnnotFilterAnnotations(win);
-    }
 }
 
 // The cached Annotation* belong to an engine the caller is about to destroy.

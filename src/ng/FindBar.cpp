@@ -201,7 +201,7 @@ void DeleteFindBar(MainWindow* win) {
 }
 
 // the compact overlay half of ShowFindBar
-static void ShowCompactBar(MainWindow* win) {
+void ShowCompactBar(MainWindow* win) {
     TempStr term = CurrentFindTermTemp(win);
     if (!win->findBar) {
         win->findBar = new FindBar();
@@ -216,16 +216,6 @@ static void ShowCompactBar(MainWindow* win) {
     win->findBar->wantFocus = true;
     win->findBar->wantSelectAll = true;
     AppShellInvalidate(win);
-}
-
-// "ShowFindBar" is the entry point used by FindFirst / Ctrl+F; it shows
-// whichever find UI the user has chosen (compact overlay or floating window)
-void ShowFindBar(MainWindow* win) {
-    if (gSettings->searchUIFloating) {
-        ShowFindWindow(win);
-        return;
-    }
-    ShowCompactBar(win);
 }
 
 void HideFindBar(MainWindow* win) {
@@ -263,11 +253,6 @@ void HideFindBar(MainWindow* win) {
 
 bool IsFindBarVisible(MainWindow* win) {
     return win && win->findBar && win->findBar->visible;
-}
-
-// true if either the compact bar or the floating find window is visible
-bool IsFindUIVisible(MainWindow* win) {
-    return IsFindBarVisible(win) || IsFindWindowVisible(win);
 }
 
 // switch the find UI between the compact overlay and the floating window

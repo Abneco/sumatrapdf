@@ -929,23 +929,6 @@ MainWindow* FindMainWindowByFile(Str file, bool focusTab, MainWindow* limitWin) 
 
 // --- thumbnails (orig's, from SumatraPDF.cpp) --------------------------------
 
-struct CreateThumbnailFromFileData {
-    Str filePath;
-    // when set, render from this clone of the open document instead of loading
-    // the file again (owned)
-    EngineBase* engine = nullptr;
-    Pixmap* bmp = nullptr;
-    // the thumbnail is rendered off the UI thread, so the per-document ebook
-    // settings have to come along as a copy (#4600)
-    FileEBookUI* fileEBookUI = nullptr;
-    ~CreateThumbnailFromFileData() {
-        str::Free(filePath);
-        SafeEngineRelease(&engine);
-        FreePixmap(bmp);
-        DeleteFileEBookUI(fileEBookUI);
-    }
-};
-
 static void CreateThumbnailFromFileFinish(CreateThumbnailFromFileData* d) {
     if (d->bmp) {
         FileState* fs = FileHistoryFindByPath(d->filePath);

@@ -341,12 +341,6 @@ static TempStr SidebarLayoutResultTemp(int* exitCodeOut) {
                   0);
 }
 
-struct LayoutProbeState {
-    MainWindow* win = nullptr;
-    int count = 0;
-    bool active = false;
-};
-
 static LayoutProbeState gLayoutProbe;
 
 static void LayoutProbeAfterLayout(MainWindow* win) {

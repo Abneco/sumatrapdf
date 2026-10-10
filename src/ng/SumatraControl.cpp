@@ -115,13 +115,6 @@ extern "C" {
 
 #include "SumatraLog.h"
 
-// One note per fullscreen or toolbar command. A paint is not a relayout.
-struct LayoutProbeState {
-    MainWindow* win = nullptr;
-    int count = 0;
-    bool active = false;
-};
-
 static LayoutProbeState gLayoutProbe;
 
 void LayoutProbeNote(MainWindow* win) {

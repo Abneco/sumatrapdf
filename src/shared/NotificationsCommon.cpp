@@ -86,3 +86,12 @@ void InstallLayoutNotifHooks() {
     gShowChapterLayoutNotifFn = ShowChapterLayoutNotif;
     gShowLazyLayoutNotifFn = ShowLazyLayoutNotif;
 }
+
+// Notifications are drawn over the document and stay for a couple of seconds.
+// A test that reads pixels has to wait them out (which is most of the runtime
+// of e.g. tests/issue-1195.ts), so -dbg-control can switch them off.
+bool gNotificationsEnabled = true;
+
+bool AreNotificationsEnabled() {
+    return gNotificationsEnabled;
+}

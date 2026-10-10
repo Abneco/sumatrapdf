@@ -7,6 +7,7 @@
 
 #include "Theme.h"
 #include "OverlayScrollbar.h"
+#include "OverlayScrollbarCommon.h"
 
 constexpr const WCHAR* kOverlayScrollbarClass = L"SUMATRA_OVERLAY_SCROLLBAR";
 
@@ -23,48 +24,9 @@ static Point gLastMousePos = {-1, -1};
 static constexpr UINT_PTR kMouseTrackTimerID = 100;
 static constexpr int kMouseTrackIntervalMs = 50;
 
-// Derive scrollbar colors from current theme
-static Color ThemeTrackColor() {
-    Color bg = ThemeControlBackgroundColor();
-    return bg;
-}
-
-static Color ThemeThumbColor() {
-    Color bg = ThemeControlBackgroundColor();
-    return AccentColor(bg, 100);
-}
-
-static Color ThemeThumbHoverColor() {
-    Color bg = ThemeControlBackgroundColor();
-    return AccentColor(bg, 140);
-}
-
 static constexpr int kMinThumbSize = 20;
 static constexpr u8 kAlphaThin = 180;
 static constexpr u8 kAlphaThick = 220;
-
-using State = OverlayScrollbar::State;
-
-static bool IsThick(OverlayScrollbar* sb) {
-    return sb->state == State::SmartThick || sb->state == State::AlwaysThick;
-}
-
-static bool IsVisible(OverlayScrollbar* sb) {
-    return sb->state == State::SmartThin || sb->state == State::SmartThick || sb->state == State::AlwaysThick;
-}
-
-// scrollbar is active: shown or auto-hidden but ready to appear
-static bool IsActive(OverlayScrollbar* sb) {
-    return sb->state != State::Hidden;
-}
-
-static int ScaledWidth(OverlayScrollbar* sb, bool thick) {
-    return thick ? sb->thickWidth : sb->thinWidth;
-}
-
-static bool IsVert(OverlayScrollbar* sb) {
-    return sb->type == OverlayScrollbar::Type::Vert;
-}
 
 // Get the track rect in client coords of the scrollbar window
 static Rect GetTrackRect(OverlayScrollbar* sb) {
@@ -1047,9 +1009,4 @@ void OverlayScrollbarSetMode(OverlayScrollbar* sb, OverlayScrollbar::Mode mode) 
         // Smart mode: start as thin, will auto-hide
         SetState(sb, State::SmartThin);
     }
-}
-
-// returns true if scrollbar is visible (thin, thick, or always thick)
-bool IsOverlayScrollbarVisible(OverlayScrollbar* sb) {
-    return sb && IsVisible(sb);
 }

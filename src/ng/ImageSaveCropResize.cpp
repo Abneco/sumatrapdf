@@ -110,20 +110,6 @@ static int FormatIdxFromExt(Str ext) {
     return kDefaultFormatIdx;
 }
 
-enum class DragEdge {
-    None,
-    Left,
-    Right,
-    Top,
-    Bottom,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-    Move,   // only used in crop mode
-    NewCrop // only used in crop mode
-};
-
 struct ImageEditWnd {
     MainWindow* win = nullptr;
     bool visible = false;

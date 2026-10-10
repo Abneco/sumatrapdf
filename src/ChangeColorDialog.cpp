@@ -32,12 +32,6 @@
 #include "ChangeColorDialogCommon.h"
 
 static const int kNumPresets = 3;
-static const Color kBgPresetColors[] = {
-    kColorUnset,
-    kColBlack,
-    kColWhite,
-};
-
 // custom swatches are laid out in 2 rows
 static const int kCustomInRow1 = 5;
 
@@ -46,11 +40,6 @@ static const Color kColCheckerDark = MkRgb(204, 204, 204);
 static const int kIdPreview = 1;
 static const int kIdPreset0 = 10;
 static const int kIdCustom0 = 20;
-
-enum class CloseAction {
-    Cancel,
-    Select
-};
 
 // HSV picker, hex edit, swatches and Cancel/OK. Same WindowBase layout as
 // Settings. Used for Change Background Color and, when colorsArgs is set, as

@@ -714,7 +714,7 @@ static void PositionFindBar(FindBarWnd* bar) {
     SetWindowPos(bar->hwnd, HWND_TOP, r.x, r.y, r.dx, r.dy, SWP_NOACTIVATE);
 }
 
-static void ShowCompactBar(MainWindow* win) {
+void ShowCompactBar(MainWindow* win) {
     TempStr term = CurrentFindTermTemp(win);
     if (!win->findBar) {
         win->findBar = CreateFindBar(win);
@@ -739,16 +739,6 @@ static void ShowCompactBar(MainWindow* win) {
     CbEditSelectAll(win->findEdit);
     // the restored term is only a starting point, not a search request: hitting
     // Ctrl+F must not re-run the last search behind the user's back
-}
-
-// "ShowFindBar" is the entry point used by FindFirst/Ctrl+F; it shows whichever
-// find UI the user has chosen (compact overlay or floating window)
-void ShowFindBar(MainWindow* win) {
-    if (gSettings->searchUIFloating) {
-        ShowFindWindow(win);
-        return;
-    }
-    ShowCompactBar(win);
 }
 
 void HideFindBar(MainWindow* win) {
@@ -786,11 +776,6 @@ void HideFindBar(MainWindow* win) {
 // here means specifically the compact bar (used to reposition it on move)
 bool IsFindBarVisible(MainWindow* win) {
     return win->findBar && HwndIsVisible(win->findBar->hwnd);
-}
-
-// true if either the compact bar or the floating find window is visible
-bool IsFindUIVisible(MainWindow* win) {
-    return IsFindBarVisible(win) || IsFindWindowVisible(win);
 }
 
 // focus the find edit and select all text (Ctrl+F when find UI is already open)

@@ -85,27 +85,6 @@ struct AnnotTextPopup {
     Func1List<MainWindow*> onWindowMoved;
 };
 
-static Color PopupBg() {
-    return ThemeNotificationsBackgroundColor();
-}
-
-static Color PopupText() {
-    return ThemeNotificationsTextColor();
-}
-
-// the date is secondary information: same hue, less contrast
-static Color PopupMutedText() {
-    float units = IsLightColor(PopupBg()) ? 55.0f : -55.0f;
-    return AdjustLightness2(PopupText(), units);
-}
-
-// the rule under the header: a mid-tone that reads on both a light and a dark
-// card (the window edge color is nearly invisible on white)
-static Color PopupRuleColor() {
-    float units = IsLightColor(PopupBg()) ? 190.0f : -190.0f;
-    return AdjustLightness2(PopupText(), units);
-}
-
 // author on the left, date on the right, with a rule underneath. It's a single
 // control rather than an HBox of two labels so that a long author name
 // ellipsizes instead of making the card wider than the comment needs
