@@ -37,6 +37,7 @@
 #include "HomePage.h"
 #include "SumatraDialogs.h"
 #include "UpdateCheck.h"
+#include "UpdateCheckCommon.h"
 
 #include "SumatraLog.h"
 
@@ -133,14 +134,6 @@ struct UpdateInfo {
         str::Free(downloadPage);
     }
 };
-
-// an available update surfaced by the pre-release startup notification; the
-// "Download and update" link downloads & installs it (owned here until then)
-static UpdateInfo* gPendingUpdate = nullptr;
-
-bool HasPendingPreReleaseUpdate() {
-    return gPendingUpdate != nullptr;
-}
 
 static void CurrentFileTime(FILETIME* ft) {
     GetSystemTimeAsFileTime(ft);
@@ -356,12 +349,6 @@ static void ExitAfterStartingUpdater() {}
 void UpdateSelfTo(Str, int) {}
 
 #endif
-
-static const Str kExpectedDlHost = StrL("https://www.sumatrapdfreader.org/");
-
-static bool IsTrustedUpdateDlUrl(Str dlURL) {
-    return str::StartsWith(dlURL, kExpectedDlHost);
-}
 
 // The build's own download when the update info names a trusted one.
 static void OpenDownloadPage(UpdateInfo* updateInfo) {
@@ -750,15 +737,6 @@ void AppendClientInfoQuery(str::Builder& url) {
     url.Append(StrL("&simd="));
     url.Append(LatestSupportedSIMD());
 #endif
-}
-
-static void BuildUpdateURL(str::Builder& url, Str baseURL, UpdateCheck updateCheckType) {
-    url.Reset(baseURL);
-    AppendClientInfoQuery(url);
-    url.Append(StrL("&withPromo"));
-    if (UpdateCheck::UserInitiated == updateCheckType) {
-        url.Append(StrL("&force"));
-    }
 }
 
 struct UpdateCheckAsyncData {

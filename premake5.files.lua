@@ -460,6 +460,7 @@ function sumatrapdf_files()
     "Translations.*",
     "Uninstaller.cpp",
     "UpdateCheck.*",
+    "UpdateCheckCommon.*",
     "UpdateTemp.*",
     "Version.h",
     "VirtWnd.*",

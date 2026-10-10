@@ -1581,6 +1581,7 @@
     <ClInclude Include="..\src\shared\ToolbarCommon.h" />
     <ClInclude Include="..\src\shared\Translations.h" />
     <ClInclude Include="..\src\shared\UpdateCheck.h" />
+    <ClInclude Include="..\src\shared\UpdateCheckCommon.h" />
     <ClInclude Include="..\src\shared\UpdateTemp.h" />
     <ClInclude Include="..\src\shared\Version.h" />
     <ClInclude Include="..\src\shared\WebpReader.h" />
@@ -2275,6 +2276,7 @@
     <ClCompile Include="..\src\shared\ToolbarCommon.cpp" />
     <ClCompile Include="..\src\shared\TranslationLangs.cpp" />
     <ClCompile Include="..\src\shared\Translations.cpp" />
+    <ClCompile Include="..\src\shared\UpdateCheckCommon.cpp" />
     <ClCompile Include="..\src\shared\UpdateTemp.cpp" />
     <ClCompile Include="..\src\shared\WebpReader.cpp" />
     <ClCompile Include="..\src\shared\WindowTab.cpp" />

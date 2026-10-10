@@ -44,6 +44,7 @@ void hexstrTest();
 void colorTest();
 void parseCommandsTest();
 void DocPropertiesTest();
+void ParseFileArgsTest();
 
 void CachedObjects_UnitTests();
 void CommandPaletteModel_UnitTests();
@@ -297,14 +298,6 @@ static void ParseCommandLineTest() {
     }
 }
 
-static void ParseFileArgsTest() {
-    FileArgs* fa = ParseFileArgs(StrL("C:\\foo.pdf?page=4"));
-    utassert(fa && str::Eq(fa->cleanPath, StrL("C:\\foo.pdf")) && fa->pageNumber == 4);
-    delete fa;
-    utassert(!ParseFileArgs(StrL("C:\\foo.pdf")));
-    utassert(!ParseFileArgs(StrL("\\\\?\\C:\\foo.pdf")));
-    utassert(!ParseFileArgs(StrL("?:\\foo.pdf")));
-}
 #endif
 
 static void PageAspectViewTest() {

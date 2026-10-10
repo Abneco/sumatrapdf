@@ -27,6 +27,7 @@
 #include "HomePage.h"
 #include "Installer.h"
 #include "UpdateCheck.h"
+#include "UpdateCheckCommon.h"
 
 static Kind kNotifUpdateCheckInProgress = StrL("notifUpdateCheckInProgress").s;
 
@@ -98,14 +99,6 @@ struct UpdateInfo {
         str::Free(builtOn);
     }
 };
-
-// an available update surfaced by the pre-release startup notification; the
-// "Download and update" link downloads & installs it (owned here until then)
-static UpdateInfo* gPendingUpdate = nullptr;
-
-bool HasPendingPreReleaseUpdate() {
-    return gPendingUpdate != nullptr;
-}
 
 /*
 The format of update information downloaded from the server:
@@ -554,12 +547,7 @@ static HRESULT CALLBACK TaskDialogHyperlinkCallback(HWND /*hwnd*/, UINT msg, WPA
     return S_OK;
 }
 
-static const Str kExpectedDlHost = StrL("https://www.sumatrapdfreader.org/");
 constexpr int kUrlHexHead = 40;
-
-static bool IsTrustedUpdateDlUrl(Str dlURL) {
-    return str::StartsWith(dlURL, kExpectedDlHost);
-}
 
 static TempStr HexHeadTemp(Str s, int nMax) {
     if (!s.s || len(s) <= 0) {
@@ -783,15 +771,6 @@ void AppendClientInfoQuery(str::Builder& url) {
     }
     url.Append(StrL("&simd="));
     url.Append(Str(LatestSupportedSIMD().s));
-}
-
-static void BuildUpdateURL(str::Builder& url, Str baseURL, UpdateCheck updateCheckType) {
-    url.Reset(baseURL);
-    AppendClientInfoQuery(url);
-    url.Append(StrL("&withPromo"));
-    if (UpdateCheck::UserInitiated == updateCheckType) {
-        url.Append(StrL("&force"));
-    }
 }
 
 struct UpdateCheckAsyncData {
