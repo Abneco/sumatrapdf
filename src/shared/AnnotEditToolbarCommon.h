@@ -90,6 +90,9 @@ void CollectPriorityAnnotPages(WindowTab* tab, Annotation* extra, Vec<int>& page
 
 // implemented by each app
 void ShowSelectedAnnotationView(WindowTab* tab);
+Rect CanvasToFramePx(MainWindow* win, Rect r);
+bool AnnotResizeRerenderPending(MainWindow* win);
+void DetachAnnotationFromEditors(Annotation* annot);
 
 void ChipThicknessPicked(AnnotEditToolbarBase* tb, int width);
 void ChipOpacityPicked(AnnotEditToolbarBase* tb, int percent);

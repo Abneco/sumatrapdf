@@ -2147,31 +2147,8 @@ TempStr AnnotColorPopupStateTemp(MainWindow* win) {
 // Drop non-owning Annotation* held by UI (selection, drag, hover, form edit).
 // Call before DeleteAnnotation frees the wrapper, or when the engine is about
 // to die and raw Annotation* must not be used again.
-void DetachAnnotationFromUI(Annotation* annot) {
-    if (!annot) {
-        return;
-    }
-    CancelFormFieldEditIfWidget(annot);
-    for (MainWindow* win : gWindows) {
-        if (win->annotationBeingDragged == annot) {
-            EndPdfEditOperation(win);
-            win->annotationBeingDragged = nullptr;
-            win->annotationBeingResized = false;
-        }
-        if (win->annotationUnderCursor == annot) {
-            win->annotationUnderCursor = nullptr;
-            HideAnnotationHoverOverlay(win);
-        }
-        HideAnnotationTextPopupFor(win, annot);
-        int nTabs = win->TabCount();
-        for (int i = 0; i < nTabs; i++) {
-            WindowTab* t = win->GetTab(i);
-            if (t && t->selectedAnnotation == annot) {
-                t->selectedAnnotation = nullptr;
-                HideAnnotEditToolbar(win);
-            }
-        }
-    }
+// drops the click anchor of an annotation that is going away
+void DetachAnnotationFromEditors(Annotation* annot) {
     if (annot == gClickAnchorAnnot) {
         gClickAnchorAnnot = nullptr;
     }
@@ -2244,25 +2221,8 @@ void StartLoadingAnnotationsForUi(WindowTab* tab) {
     EngineMupdfStartLoadAllAnnotations(engine, firstPages, MkFunc0(OnAnnotsProgress, tab));
 }
 
-void RefreshAnnotationLists(WindowTab* tab) {
-    if (!tab || !tab->win) {
-        return;
-    }
-    StartLoadingAnnotationsForUi(tab);
-    RefreshAnnotFilterAnnotations(tab->win);
-    CommandPaletteOnAnnotationsChanged();
-}
-
-void RefreshEditAnnotationsAfterEngineChange(WindowTab* tab) {
-    if (!tab || !tab->win) {
-        return;
-    }
-    StartLoadingAnnotationsForUi(tab);
-    RefreshAnnotFilterAnnotations(tab->win);
-}
-
 // tests click the frame; the document model is canvas pixels
-static Rect CanvasToFramePx(MainWindow* win, Rect r) {
+Rect CanvasToFramePx(MainWindow* win, Rect r) {
     float s = CanvasScale(win);
     if (s <= 0.f) {
         s = 1.f;
@@ -2273,53 +2233,8 @@ static Rect CanvasToFramePx(MainWindow* win, Rect r) {
 }
 
 // selected annotation and loaded-annot count (issue-5933, issue-6023)
-TempStr AnnotEditorLayoutResultTemp(int, int, int* exitCodeOut, int) {
-    str::Builder out;
-    auto finish = [&](Str msg, int code) -> TempStr {
-        out.Append(msg);
-        out.AppendChar('\n');
-        if (exitCodeOut) {
-            *exitCodeOut = code;
-        }
-        return ToStrTemp(out);
-    };
-
-    if (len(gWindows) == 0) {
-        return finish(StrL("NOTREADY no-window"), 2);
-    }
-    MainWindow* win = gWindows[0];
-    if (!win || !win->IsDocLoaded()) {
-        return finish(StrL("NOTREADY no-doc"), 2);
-    }
-    WindowTab* tab = win->CurrentTab();
-    if (!tab || !EngineSupportsAnnotations(tab->GetEngine())) {
-        return finish(StrL("ERROR no-annot-engine"), 1);
-    }
-
-    StartLoadingAnnotationsForUi(tab);
-    Vec<Annotation*> annots;
-    EngineMupdfGetLoadedAnnotations(tab->GetEngine(), annots);
-    int n = len(annots);
-    out.Append(fmt("OK n=%d ignoreReload=%d reloadOnFocus=%d resizeRerenderPending=%d", n,
-                   (int)tab->ignoreNextAutoReload, (int)tab->reloadOnFocus,
-                   (int)(win->annotationResizeRerenderLeftMs != 0)));
-    Annotation* annot = tab->selectedAnnotation;
-    DisplayModel* dm = tab->AsFixed();
-    if (annot && dm) {
-        Rect annotRect = CanvasToFramePx(win, dm->CvtToScreen(annot->pageNo, GetRect(annot)));
-        out.Append(fmt(" annotType=%d annotRect=%d,%d,%d,%d canResize=%d", (int)annot->type, annotRect.x, annotRect.y,
-                       annotRect.dx, annotRect.dy, (int)AnnotationCanBeResized(annot->type)));
-        // outline the pointer is dragging; empty unless that resize is in progress
-        Rect outline;
-        if (win->annotationBeingResized && win->annotationResizeOutlineOnly) {
-            outline = CanvasToFramePx(win, dm->CvtToScreen(annot->pageNo, win->annotationResizePreviewRect));
-        }
-        out.Append(fmt(" resizeOutline=%d,%d,%d,%d", outline.x, outline.y, outline.dx, outline.dy));
-        out.Append(fmt(" color=%s interiorColor=%s opacity=%d", ColorDumpTemp(GetColor(annot)),
-                       ColorDumpTemp(InteriorColor(annot)), Opacity(annot)));
-        out.Append(fmt(" contents=%s", Contents(annot)));
-    }
-    return finish({}, 0);
+bool AnnotResizeRerenderPending(MainWindow* win) {
+    return win->annotationResizeRerenderLeftMs != 0;
 }
 
 // --- the hover card of the annotation under the cursor (Edit PDF) -----------
