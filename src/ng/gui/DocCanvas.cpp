@@ -62,6 +62,7 @@
 #include "gui/DialogWidgets.h"
 #include "gui/DocCanvas.h"
 #include "CanvasCommon.h"
+#include "MainWindowCommon.h"
 
 #include "SumatraLog.h"
 
@@ -1725,13 +1726,6 @@ static void StartMouseDrag(MainWindow* win, int x, int y, bool right = false) {
     }
 }
 
-static bool IsRightDragging(MainWindow* win) {
-    if (win->mouseAction != MouseAction::Dragging) {
-        return false;
-    }
-    return win->dragRightClick;
-}
-
 static void StopMouseDrag(MainWindow* win, int x, int y, bool aborted = false) {
     if (win->mouseAction != MouseAction::Dragging) {
         return;
@@ -2483,25 +2477,6 @@ static void PaintAnnotationMove(MainWindow* win, gp::PaintCtx* ctx) {
 }
 
 #if OS_WIN
-static bool IsFullPageImage(DisplayModel* dm, IPageElement* el, int pageNo) {
-    // in image documents every page is a full-page image and dragging
-    // it out to another app is the expected behavior
-    Kind k = dm->GetEngine()->kind;
-    if (k == kindEngineImage || k == kindEngineImageDir || k == kindEngineComicBooks) {
-        return false;
-    }
-    if (!dm->ValidPageNo(pageNo)) {
-        return false;
-    }
-    RectF pageRc = dm->GetEngine()->PageMediabox(pageNo);
-    float pageArea = pageRc.dx * pageRc.dy;
-    if (pageArea <= 0) {
-        return false;
-    }
-    RectF imgRc = el->GetRect();
-    float imgArea = imgRc.dx * imgRc.dy;
-    return imgArea >= 0.8f * pageArea;
-}
 #endif
 
 // --- left button ------------------------------------------------------------

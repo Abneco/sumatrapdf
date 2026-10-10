@@ -4,3 +4,4 @@
 // --- shared by RefHoverPopupCommon.cpp and each app's RefHoverPopup.cpp ---
 
 IPageDestination* LaunchLinkAtPopupPt(RefHoverState* s, int clientX, int clientY);
+bool RefHoverIsInternalLink(IPageElement* el, DisplayModel* dm);

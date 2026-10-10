@@ -917,13 +917,6 @@ void UpdateControlsColors(MainWindow* win) {
     }
 }
 
-bool IsRightDragging(MainWindow* win) {
-    if (win->mouseAction != MouseAction::Dragging) {
-        return false;
-    }
-    return win->dragRightClick;
-}
-
 HWND MainWindowHwnd(MainWindow* win) {
     return win ? win->hwndFrame : nullptr;
 }

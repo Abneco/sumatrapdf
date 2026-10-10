@@ -71,6 +71,7 @@
 
 #include "RefHover.h"
 #include "Canvas.h"
+#include "PageGridDialogCommon.h"
 #include "SumatraLog.h"
 
 // if set instead of trying to render pages we don't have, we simply do nothing
@@ -1328,29 +1329,6 @@ static bool IsTripleClick(int x, int y) {
     return dx <= GetSystemMetrics(SM_CXDOUBLECLK) && dy <= GetSystemMetrics(SM_CYDOUBLECLK);
 }
 
-// a full-page image (e.g. a scanned page) shouldn't start an image drag-out:
-// there click-and-drag is expected to pan the page (issue #5754). detect it by
-// comparing the image's area to the page's.
-static bool IsFullPageImage(DisplayModel* dm, IPageElement* el, int pageNo) {
-    // in image documents every page is a full-page image and dragging
-    // it out to another app is the expected behavior
-    Kind k = dm->GetEngine()->kind;
-    if (k == kindEngineImage || k == kindEngineImageDir || k == kindEngineComicBooks) {
-        return false;
-    }
-    if (!dm->ValidPageNo(pageNo)) {
-        return false;
-    }
-    RectF pageRc = dm->GetEngine()->PageMediabox(pageNo);
-    float pageArea = pageRc.dx * pageRc.dy;
-    if (pageArea <= 0) {
-        return false;
-    }
-    RectF imgRc = el->GetRect();
-    float imgArea = imgRc.dx * imgRc.dy;
-    return imgArea >= 0.8f * pageArea;
-}
-
 static bool MouseHasCtrl(WPARAM key) {
     return IsCtrlPressed() || bit::IsMaskSet(key, (WPARAM)MK_CONTROL);
 }
@@ -2185,14 +2163,6 @@ void SetShowPageGrid(bool on) {
     gShowPageGrid = on;
 }
 
-void RedrawPageGridWindows() {
-    for (MainWindow* w : gWindows) {
-        if (w) {
-            w->RedrawAll(true);
-        }
-    }
-}
-
 /* debug code to visualize links and images (can block while rendering) */
 static void DebugOutlinePageElements(DisplayModel* dm, HDC hdc, bool images) {
     Rect viewPortRect(Point(), dm->GetViewPort().Size());
@@ -2309,7 +2279,6 @@ constexpr int kPageGridMinMinorPx = 6;
 constexpr int kPageGridMinMajorPx = 4;
 constexpr int kPageGridMaxDots = 8000;
 constexpr int kPageGridMaxLines = 800;
-constexpr Color kPageGridDefaultColor = MkRgb(128, 128, 255);
 
 enum class PageGridStyleKind {
     Dots,
@@ -2359,24 +2328,6 @@ static PageGridDraw GetPageGridDraw() {
     d.offsetXPt = limitValue(d.offsetXPt, -720.f, 720.f);
     d.offsetYPt = limitValue(d.offsetYPt, -720.f, 720.f);
     return d;
-}
-
-static float PageGridAlignDown(float v, float origin, float step) {
-    if (step <= 0) {
-        return origin;
-    }
-    return origin + (floorf((v - origin) / step) * step);
-}
-
-static bool PageGridIsMajor(float v, float origin, float minorPt, int subdiv) {
-    if (minorPt <= 0.f || subdiv < 1) {
-        return true;
-    }
-    int i = (int)floorf(((v - origin) / minorPt) + 0.5f);
-    if (i < 0) {
-        i = -i;
-    }
-    return (i % subdiv) == 0;
 }
 
 static int PageGridScreenDist(Point a, Point b) {

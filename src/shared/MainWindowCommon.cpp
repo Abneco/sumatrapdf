@@ -345,3 +345,10 @@ MainWindow* FindMainWindowByTab(WindowTab* tabToFind) {
     }
     return nullptr;
 }
+
+bool IsRightDragging(MainWindow* win) {
+    if (win->mouseAction != MouseAction::Dragging) {
+        return false;
+    }
+    return win->dragRightClick;
+}

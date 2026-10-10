@@ -28,3 +28,4 @@ bool PathFromFileUriTemp(Str uri, TempStr* pathOut, Str* fragmentOut);
 bool IsFileSupportedByContent(Str filePath);
 TempStr NormalizeFuzzyTemp(Str str);
 bool MatchFuzzy(Str s1, Str s2, bool partially);
+bool IsRightDragging(MainWindow* win);

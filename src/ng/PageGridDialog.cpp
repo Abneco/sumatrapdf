@@ -52,14 +52,6 @@ void SetShowPageGrid(bool on) {
     gShowPageGrid = on;
 }
 
-void RedrawPageGridWindows() {
-    for (MainWindow* w : gWindows) {
-        if (w) {
-            w->RedrawAll(true);
-        }
-    }
-}
-
 // --- the overlay (orig's Canvas.cpp) ----------------------------------------
 
 enum class PageGridStyleKind {
@@ -110,24 +102,6 @@ static PageGridDraw GetPageGridDraw() {
     d.offsetXPt = limitValue(d.offsetXPt, -720.f, 720.f);
     d.offsetYPt = limitValue(d.offsetYPt, -720.f, 720.f);
     return d;
-}
-
-static float PageGridAlignDown(float v, float origin, float step) {
-    if (step <= 0) {
-        return origin;
-    }
-    return origin + (floorf((v - origin) / step) * step);
-}
-
-static bool PageGridIsMajor(float v, float origin, float minorPt, int subdiv) {
-    if (minorPt <= 0.f || subdiv < 1) {
-        return true;
-    }
-    int i = (int)floorf(((v - origin) / minorPt) + 0.5f);
-    if (i < 0) {
-        i = -i;
-    }
-    return (i % subdiv) == 0;
 }
 
 // ng: orig strokes with a GDI pen; here every line is a filled rect in document

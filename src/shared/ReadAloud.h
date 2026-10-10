@@ -234,6 +234,7 @@ void ReadAloudFinishSession(WindowTab* tab, MainWindow* win);
 SpeakChunkResult ReadAloudSpeakChunk(WindowTab* tab, Str errMsg);
 void ReadAloudClearSourceTab();
 
-// implemented by each app
 void ReadAloudShowNotif(WindowTab* tab, Str msg);
+
+// implemented by each app
 void ReadAloudSetSpeed(float speed);

@@ -15,27 +15,7 @@
 #include "DisplayModel.h"
 #include "MainWindow.h"
 #include "RefHover.h"
-
-// Canvas wiring entry points (RefHoverCanvas.cpp) — keep DocCanvas.cpp thin.
-bool RefHoverIsInternalLink(IPageElement* el, DisplayModel* dm) {
-    if (!el || !el->Is(kindPageElementDest)) {
-        return false;
-    }
-    IPageDestination* dest = el->AsLink();
-    if (!dest) {
-        return false;
-    }
-    if (IsLaunchLinkKind(dest->GetKind())) {
-        return false;
-    }
-    int destPage = PageDestGetPageNo(dest);
-    if (dm && dm->ValidPageNo(destPage)) {
-        return true;
-    }
-    // chaptered doc: destPage stays -1 until clicked, but a dest with a
-    // chapter to resolve lazily is still an internal link
-    return dm && destPage < 1 && dest->loc.chapter >= 1;
-}
+#include "RefHoverPopupCommon.h"
 
 // ng: orig converts the page rect to screen coordinates because the popup is a
 // top-level window. Here the popup lives inside the canvas, so the page rect

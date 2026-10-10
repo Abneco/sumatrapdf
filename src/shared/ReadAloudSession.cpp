@@ -17,6 +17,7 @@
 #include "TextSelection.h"
 #include "WindowTab.h"
 #include "MainWindow.h"
+#include "Notifications.h"
 #include "Toolbar.h"
 #include "Selection.h"
 #include "SumatraPDF.h"
@@ -1073,4 +1074,12 @@ float ReadAloudSpeedAt(int idx) {
     int n = dimofi(kReadAloudSpeeds);
     idx = ClampI(idx, 0, n - 1);
     return kReadAloudSpeeds[idx];
+}
+
+void ReadAloudShowNotif(WindowTab* tab, Str msg) {
+    NotificationCreateArgs args;
+    args.win = tab->win;
+    args.msg = msg;
+    args.timeoutMs = 2000;
+    ShowNotification(args);
 }

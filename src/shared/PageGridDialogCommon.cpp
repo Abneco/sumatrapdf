@@ -117,3 +117,29 @@ TempStr PageGridStateTemp() {
                pg->color.s ? pg->color.s : StrL(""), pg->style.s ? pg->style : StrL(""),
                pg->units.s ? pg->units : StrL(""), ShowTransparencyGrid() ? 1 : 0);
 }
+
+void RedrawPageGridWindows() {
+    for (MainWindow* w : gWindows) {
+        if (w) {
+            w->RedrawAll(true);
+        }
+    }
+}
+
+float PageGridAlignDown(float v, float origin, float step) {
+    if (step <= 0) {
+        return origin;
+    }
+    return origin + (floorf((v - origin) / step) * step);
+}
+
+bool PageGridIsMajor(float v, float origin, float minorPt, int subdiv) {
+    if (minorPt <= 0.f || subdiv < 1) {
+        return true;
+    }
+    int i = (int)floorf(((v - origin) / minorPt) + 0.5f);
+    if (i < 0) {
+        i = -i;
+    }
+    return (i % subdiv) == 0;
+}

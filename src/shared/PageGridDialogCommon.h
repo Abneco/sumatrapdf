@@ -32,3 +32,6 @@ Str PageGridUnitName(int i);
 Str PageGridStyleName(int i);
 PageGrid* PageGridPrefs();
 void CopyPageGridSnap(PageGridSnap& dst, const PageGrid& src, bool showGrid);
+void RedrawPageGridWindows();
+float PageGridAlignDown(float v, float origin, float step);
+bool PageGridIsMajor(float v, float origin, float minorPt, int subdiv);

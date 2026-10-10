@@ -703,14 +703,6 @@ void ReadAloudSetSpeed(float speed) {
     }
 }
 
-void ReadAloudShowNotif(WindowTab* tab, Str msg) {
-    NotificationCreateArgs args;
-    args.win = tab->win;
-    args.msg = msg;
-    args.timeoutMs = 2000;
-    ShowNotification(args);
-}
-
 // Voice selection menu
 static TempStr TtsLangIdToLocaleNameTemp(Str lang) {
     if (len(lang) == 0) {
