@@ -168,13 +168,13 @@ function extractStringsFromCFilesNoPaths(): string[] {
 
 // home page tips: one per line of the sumatraTips raw string, translated at
 // runtime with Tr(line). Their markup ([text](link), (Kbd/...)) must survive
-const tipsPattern = /static Str sumatraTips = StrL\(R"tips\(([\s\S]*?)\)tips"\);/;
+const tipsPattern = /^(?:static )?Str sumatraTips = StrL\(R"tips\(([\s\S]*?)\)tips"\);/m;
 
 function extractTips(): string[] {
   const tips: string[] = [];
-  for (const dir of ["src", "src/shared", "src/ng"]) {
-    const path = join(dir, "HomePage.cpp");
-    if (!existsSync(path)) continue;
+  // orig and ng share the tips
+  {
+    const path = join("src", "shared", "HomePageCommon.cpp");
     const m = tipsPattern.exec(readFileSync(path, "utf-8"));
     if (!m) throw new Error(`sumatraTips not found in ${path}`);
     tips.push(
