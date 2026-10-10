@@ -209,3 +209,60 @@ void ApplyDigitSpeed(MainWindow* win, int digit) {
     logf("ReadingAutoScroll: digit %d -> %d px/s\n", digit, (int)CurrentSpeed());
     BarUpdate(win);
 }
+
+void ReadingAutoScrollHideBar(MainWindow* win) {
+    KillReadingTimer(win);
+    BarHide(win);
+}
+
+void ReadingAutoScrollToggle(MainWindow* win) {
+    if (!win) {
+        return;
+    }
+    if (ActiveTab(win)) {
+        ReadingAutoScrollStop(win);
+        return;
+    }
+    ReadingAutoScrollStart(win);
+}
+
+void ReadingAutoScrollPause(MainWindow* win) {
+    WindowTab* tab = ActiveTab(win);
+    if (!tab) {
+        return;
+    }
+    if (tab->autoScroll.atEnd && tab->autoScroll.paused) {
+        return;
+    }
+    tab->autoScroll.paused = !tab->autoScroll.paused;
+    logf("ReadingAutoScroll: paused %d\n", (int)tab->autoScroll.paused);
+    if (tab->autoScroll.paused) {
+        KillReadingTimer(win);
+        tab->autoScroll.accum = 0;
+    } else {
+        tab->autoScroll.atEnd = AtScrollLimit(ScrollModel(tab), tab->autoScroll.dir);
+        if (tab->autoScroll.atEnd) {
+            tab->autoScroll.paused = true;
+        } else {
+            ArmReadingTimer(win, tab);
+        }
+    }
+    BarUpdate(win, true);
+}
+
+void ReadingAutoScrollReverse(MainWindow* win) {
+    WindowTab* tab = ActiveTab(win);
+    if (!tab) {
+        return;
+    }
+    tab->autoScroll.dir = tab->autoScroll.dir >= 0 ? -1 : 1;
+    logf("ReadingAutoScroll: dir %d\n", tab->autoScroll.dir);
+    tab->autoScroll.atEnd = AtScrollLimit(ScrollModel(tab), tab->autoScroll.dir);
+    if (tab->autoScroll.atEnd) {
+        tab->autoScroll.paused = true;
+        KillReadingTimer(win);
+    } else if (!tab->autoScroll.paused) {
+        ArmReadingTimer(win, tab);
+    }
+    BarUpdate(win, true);
+}

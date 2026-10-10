@@ -79,7 +79,7 @@ static void StopMiddleClickScroll(MainWindow* win) {
 // ng: orig arms / kills a 10 ms WM_TIMER; the shell ticks unconditionally, so
 // "armed" is just the per-tab state the tick reads. What is left of the two is
 // resetting the time base and the sub-pixel accumulator.
-static void ArmReadingTimer(MainWindow*, WindowTab* tab) {
+void ArmReadingTimer(MainWindow*, WindowTab* tab) {
     if (!tab) {
         return;
     }
@@ -87,17 +87,11 @@ static void ArmReadingTimer(MainWindow*, WindowTab* tab) {
     tab->autoScroll.accum = 0;
 }
 
-static void KillReadingTimer(MainWindow*) {}
+void KillReadingTimer(MainWindow*) {}
 
 static ReadingAutoScrollBar* BarEnsure(MainWindow* win);
-static void BarHide(MainWindow* win);
 
-void ReadingAutoScrollHideBar(MainWindow* win) {
-    KillReadingTimer(win);
-    BarHide(win);
-}
-
-static void ReadingAutoScrollStart(MainWindow* win) {
+void ReadingAutoScrollStart(MainWindow* win) {
     WindowTab* tab = CurrentDocTab(win);
     if (!tab || !ScrollModel(tab)) {
         return;
@@ -138,58 +132,6 @@ void ReadingAutoScrollSyncToTab(WindowTab* tab) {
     ReadingAutoScrollBar* bar = BarEnsure(win);
     if (bar) {
         bar->sessionTab = tab;
-    }
-    BarUpdate(win, true);
-}
-
-void ReadingAutoScrollToggle(MainWindow* win) {
-    if (!win) {
-        return;
-    }
-    if (ActiveTab(win)) {
-        ReadingAutoScrollStop(win);
-        return;
-    }
-    ReadingAutoScrollStart(win);
-}
-
-void ReadingAutoScrollPause(MainWindow* win) {
-    WindowTab* tab = ActiveTab(win);
-    if (!tab) {
-        return;
-    }
-    if (tab->autoScroll.atEnd && tab->autoScroll.paused) {
-        return;
-    }
-    tab->autoScroll.paused = !tab->autoScroll.paused;
-    logf("ReadingAutoScroll: paused %d\n", (int)tab->autoScroll.paused);
-    if (tab->autoScroll.paused) {
-        KillReadingTimer(win);
-        tab->autoScroll.accum = 0;
-    } else {
-        tab->autoScroll.atEnd = AtScrollLimit(ScrollModel(tab), tab->autoScroll.dir);
-        if (tab->autoScroll.atEnd) {
-            tab->autoScroll.paused = true;
-        } else {
-            ArmReadingTimer(win, tab);
-        }
-    }
-    BarUpdate(win, true);
-}
-
-void ReadingAutoScrollReverse(MainWindow* win) {
-    WindowTab* tab = ActiveTab(win);
-    if (!tab) {
-        return;
-    }
-    tab->autoScroll.dir = tab->autoScroll.dir >= 0 ? -1 : 1;
-    logf("ReadingAutoScroll: dir %d\n", tab->autoScroll.dir);
-    tab->autoScroll.atEnd = AtScrollLimit(ScrollModel(tab), tab->autoScroll.dir);
-    if (tab->autoScroll.atEnd) {
-        tab->autoScroll.paused = true;
-        KillReadingTimer(win);
-    } else if (!tab->autoScroll.paused) {
-        ArmReadingTimer(win, tab);
     }
     BarUpdate(win, true);
 }
@@ -464,7 +406,7 @@ static void BarSyncWindow(MainWindow* win) {
     bar->tw = ToolWindowOpen(desc, win, r);
 }
 
-static void BarHide(MainWindow* win) {
+void BarHide(MainWindow* win) {
     if (win && win->readingAutoScrollBar) {
         win->readingAutoScrollBar->sessionTab = nullptr;
     }
