@@ -1449,6 +1449,7 @@
     <ClInclude Include="..\src\shared\AppSettings.h" />
     <ClInclude Include="..\src\shared\AppTools.h" />
     <ClInclude Include="..\src\shared\AvifReader.h" />
+    <ClInclude Include="..\src\shared\BrowserViewCommon.h" />
     <ClInclude Include="..\src\shared\CachedObjects.h" />
     <ClInclude Include="..\src\shared\CanvasCommon.h" />
     <ClInclude Include="..\src\shared\ChangeColorDialogCommon.h" />
@@ -2109,6 +2110,7 @@
     <ClCompile Include="..\src\shared\AppSettings.cpp" />
     <ClCompile Include="..\src\shared\AppTools.cpp" />
     <ClCompile Include="..\src\shared\AvifReader.cpp" />
+    <ClCompile Include="..\src\shared\BrowserViewCommon.cpp" />
     <ClCompile Include="..\src\shared\CachedObjects.cpp" />
     <ClCompile Include="..\src\shared\CanvasCommon.cpp" />
     <ClCompile Include="..\src\shared\ChangeColorDialogCommon.cpp" />

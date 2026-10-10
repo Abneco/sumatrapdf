@@ -20,6 +20,7 @@
 #include "MainWindow.h"
 #include "gui/AppShell.h"
 #include "gui/BrowserView.h"
+#include "BrowserViewCommon.h"
 
 #include "SumatraLog.h"
 
@@ -336,22 +337,6 @@ static void Eval(BrowserView* bv, Str js) {
 
 // --- the served resources ---------------------------------------------------
 
-static TempStr ChmMimeFromPathTemp(Str path, Str data) {
-    Str ext = str::SliceFromCharLast(path, '.');
-    if (str::ContainsChar(ext, ';')) {
-        Str semi = str::SliceFromChar(ext, ';');
-        TempStr trimmed = str::DupTemp(Str(path.s, (int)(semi.s - path.s)));
-        return ChmMimeFromPathTemp(trimmed, data);
-    }
-
-    TempStr imgExt = GfxFileExtFromDataTemp(data);
-    TempStr mime = MimeTypeFromExtTemp(ext, imgExt);
-    if (len(mime) == 0) {
-        mime = StrL("text/html");
-    }
-    return mime;
-}
-
 // wry hands the handler the url in its "<protocol>://" form; put it back into
 // the "https://<protocol>." form the model's urls use
 static TempStr FromProtocolUrlTemp(Str uri) {
@@ -624,8 +609,6 @@ static TempStr ToWebViewUrlTemp(Str url) {
     return str::DupTemp(url);
 }
 
-static TempStr JsEscapeTemp(Str s);
-
 // A custom-scheme load often ignores #fragment. Scroll once the node exists.
 static void ScrollToFragment(BrowserView* bv, Str url) {
     Str frag = str::SliceFromChar(url, '#');
@@ -750,35 +733,6 @@ void BrowserViewFindInPageUI(BrowserView* bv) {
 
 bool BrowserViewCanFindInPage(BrowserView* bv) {
     return Raw(bv) != nullptr;
-}
-
-// escape s for use inside a single-quoted JS string literal
-static TempStr JsEscapeTemp(Str s) {
-    str::Builder buf;
-    for (int i = 0; i < s.len; i++) {
-        char c = s.s[i];
-        switch (c) {
-            case '\\':
-                buf.Append(StrL("\\\\"));
-                break;
-            case '\'':
-                buf.Append(StrL("\\'"));
-                break;
-            case '\n':
-                buf.Append(StrL("\\n"));
-                break;
-            case '\r':
-                buf.Append(StrL("\\r"));
-                break;
-            case '\t':
-                buf.Append(StrL("\\t"));
-                break;
-            default:
-                buf.AppendChar(c);
-                break;
-        }
-    }
-    return ToStrTemp(buf);
 }
 
 // highlight matches of term on the current page; gotoIdx >= 0 makes that match

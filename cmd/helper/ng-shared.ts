@@ -117,6 +117,8 @@ export const sharedFiles = [
   "src/shared/AnnotEditToolbarCommon.h",
   "src/shared/AnnotPlacementCommon.cpp",
   "src/shared/AnnotPlacementCommon.h",
+  "src/shared/BrowserViewCommon.cpp",
+  "src/shared/BrowserViewCommon.h",
   "src/shared/CanvasCommon.cpp",
   "src/shared/CanvasCommon.h",
   "src/shared/ChangeColorDialogCommon.cpp",

@@ -16,6 +16,7 @@
 #include "Accelerators.h"
 #include "gui/BrowserView.h"
 #include "gui/win/BrowserDocView.h"
+#include "BrowserViewCommon.h"
 
 constexpr const char* kChmVirtualHost = "https://sumatrapdf.chm/";
 constexpr const WCHAR* kChmVirtualHostW = L"https://sumatrapdf.chm/";
@@ -314,22 +315,6 @@ void BrowserWebviewWnd::OnJsNotifyCb(void* ctx, Str method, Str paramsJson) {
         return;
     }
     logf("BrowserOnJsNotify: unhandled '%s'\n", method);
-}
-
-static TempStr ChmMimeFromPathTemp(Str path, Str data) {
-    Str ext = str::SliceFromCharLast(path, '.');
-    if (str::ContainsChar(ext, ';')) {
-        Str semi = str::SliceFromChar(ext, ';');
-        TempStr trimmed = str::DupTemp(Str(path.s, (int)(semi.s - path.s)));
-        return ChmMimeFromPathTemp(trimmed, data);
-    }
-
-    TempStr imgExt = GfxFileExtFromDataTemp(data);
-    TempStr mime = MimeTypeFromExtTemp(ext, imgExt);
-    if (len(mime) == 0) {
-        mime = StrL("text/html");
-    }
-    return mime;
 }
 
 bool BrowserDocView::ResourceGet(void* ctx, Str path, WebViewResourceResult* res) {
@@ -735,35 +720,6 @@ void BrowserDocView::FindInCurrentPage() {
 
 bool BrowserDocView::CanFindInPage() const {
     return backend == Backend::WebView2 && wv != nullptr;
-}
-
-// escape s for use inside a single-quoted JS string literal
-static TempStr JsEscapeTemp(Str s) {
-    str::Builder buf;
-    for (int i = 0; i < s.len; i++) {
-        char c = s.s[i];
-        switch (c) {
-            case '\\':
-                buf.Append(StrL("\\\\"));
-                break;
-            case '\'':
-                buf.Append(StrL("\\'"));
-                break;
-            case '\n':
-                buf.Append(StrL("\\n"));
-                break;
-            case '\r':
-                buf.Append(StrL("\\r"));
-                break;
-            case '\t':
-                buf.Append(StrL("\\t"));
-                break;
-            default:
-                buf.AppendChar(c);
-                break;
-        }
-    }
-    return ToStrTemp(buf);
 }
 
 // highlight matches of term on the current page; gotoIdx >= 0 makes that
