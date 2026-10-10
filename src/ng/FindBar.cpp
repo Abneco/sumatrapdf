@@ -720,3 +720,11 @@ gp::El* FindBarBuild(MainWindow* win, gp::Ctx* cx) {
     }
     return card;
 }
+
+// orig pushes the toggle state and the history into its win32 controls; the
+// gpui bar is rebuilt from MainWindow state every frame
+void FindBarSetMatchCaseChecked(MainWindow*, bool) {}
+
+void FindBarSetMatchWholeWordChecked(MainWindow*, bool) {}
+
+void FindBarSyncHistory(MainWindow*) {}

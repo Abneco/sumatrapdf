@@ -1320,3 +1320,80 @@ Str HandleSyncCmd(Str cmd, bool* ack) {
     *ack = true;
     return next;
 }
+
+// last 10 find queries, newest first. Session-only (issue #893).
+constexpr int kFindHistoryMax = 10;
+
+void RememberFindQuery(Str q) {
+    if (len(q) == 0) {
+        return;
+    }
+    TempStr trimmed = str::DupTemp(q);
+    str::TrimWSInPlace(trimmed, str::TrimOpt::Both);
+    if (len(trimmed) == 0) {
+        return;
+    }
+    int existing = gFindHistory.Find(trimmed);
+    if (existing == 0) {
+        return; // already the most recent
+    }
+    if (existing > 0) {
+        gFindHistory.RemoveAt(existing);
+    }
+    gFindHistory.InsertAt(0, trimmed);
+    while (len(gFindHistory) > kFindHistoryMax) {
+        gFindHistory.RemoveAt(len(gFindHistory) - 1);
+    }
+    for (MainWindow* w : gWindows) {
+        FindBarSyncHistory(w);
+        FindWindowSyncHistory(w);
+    }
+}
+
+void FindToggleMatchCase(MainWindow* win) {
+    if (!win->IsDocLoaded() || !NeedsFindUI(win)) {
+        return;
+    }
+    DocController* md = BrowserFindCtrl(win);
+    if (!md && !win->AsFixed()) {
+        return;
+    }
+    win->findMatchCase = !win->findMatchCase;
+    if (win->AsFixed()) {
+        win->AsFixed()->textSearch->SetMatchCase(win->findMatchCase);
+    }
+    FindBarSetMatchCaseChecked(win, win->findMatchCase);
+    FindEditSetModified(win, true);
+    // re-run the search with the new match-case setting
+    if (HasFindText(win)) {
+        if (md) {
+            BrowserFindStartSearch(win, md);
+        } else {
+            FindTextOnThread(win, TextSearch::Direction::Forward, true);
+        }
+    }
+}
+
+void FindToggleMatchWholeWord(MainWindow* win) {
+    if (!win->IsDocLoaded() || !NeedsFindUI(win)) {
+        return;
+    }
+    DocController* md = BrowserFindCtrl(win);
+    if (!md && !win->AsFixed()) {
+        return;
+    }
+    win->findMatchWholeWord = !win->findMatchWholeWord;
+    if (win->AsFixed()) {
+        win->AsFixed()->textSearch->SetMatchWholeWord(win->findMatchWholeWord);
+    }
+    FindBarSetMatchWholeWordChecked(win, win->findMatchWholeWord);
+    FindEditSetModified(win, true);
+    // re-run the search with the new whole-word setting
+    if (HasFindText(win)) {
+        if (md) {
+            BrowserFindStartSearch(win, md);
+        } else {
+            FindTextOnThread(win, TextSearch::Direction::Forward, true);
+        }
+    }
+}

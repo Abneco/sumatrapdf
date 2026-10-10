@@ -1245,3 +1245,6 @@ TempStr FindWindowContentsResultTemp(int maxRows, int* exitCodeOut) {
     }
     return finish(0, fmt("OK term=%s n=%d snippets=%d first=%s", term, n, nSnippets, win->findMatches[0].snippet));
 }
+
+// see FindBarSyncHistory()
+void FindWindowSyncHistory(MainWindow*) {}

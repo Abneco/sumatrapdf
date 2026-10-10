@@ -61,3 +61,4 @@ bool FindWindowHasKeyboard(MainWindow* win);
 TempStr FindWindowContentsResultTemp(int maxRows, int* exitCodeOut);
 TempStr FindResultPageColumnClipResultTemp(int* exitCodeOut = nullptr);
 TempStr FindResultsOrderResultTemp(Str term, int startPage, int* exitCodeOut = nullptr);
+void FindWindowSyncHistory(MainWindow* win);

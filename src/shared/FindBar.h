@@ -81,7 +81,7 @@ int FindBarFontHeight(MainWindow* win);
 int FindBarWindowHeight(MainWindow* win);
 int FindStatusDx(PlatformFont* font, int totalHits, bool capped);
 void StartPickedFindTerm(MainWindow* win, Str term);
+#endif
 void FindBarSetMatchCaseChecked(MainWindow* win, bool checked);
 void FindBarSetMatchWholeWordChecked(MainWindow* win, bool checked);
 void FindBarSyncHistory(MainWindow* win);
-#endif
