@@ -117,3 +117,14 @@ void RunWaitSessionRestored(ControlRequest* req);
 bool ParseArg(PacketReader& r, ControlArg** argOut);
 void SnapshotRenderIdle(ControlRequest* req);
 void SnapshotSessionRestore(ControlRequest* req);
+
+#if OS_WIN
+bool ReadExact(HANDLE h, void* data, DWORD n);
+bool WriteExact(HANDLE h, Str data);
+struct ControlThreadArg {
+    Str pipeName;
+};
+void SumatraControlThread(ControlThreadArg* arg);
+// implemented by each app
+bool ProcessControlConnection(HANDLE h);
+#endif

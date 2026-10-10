@@ -2142,32 +2142,6 @@ void SnapshotSessionRestore(ControlRequest* req) {
     req->done.Set();
 }
 
-static bool ReadExact(HANDLE h, void* data, DWORD n) {
-    u8* d = (u8*)data;
-    DWORD total = 0;
-    while (total < n) {
-        DWORD nRead = 0;
-        if (!ReadFile(h, d + total, n - total, &nRead, nullptr) || nRead == 0) {
-            return false;
-        }
-        total += nRead;
-    }
-    return true;
-}
-
-static bool WriteExact(HANDLE h, Str data) {
-    const u8* d = (const u8*)data.s;
-    int total = 0;
-    while (total < data.len) {
-        DWORD nWritten = 0;
-        if (!WriteFile(h, d + total, (DWORD)(data.len - total), &nWritten, nullptr) || nWritten == 0) {
-            return false;
-        }
-        total += (int)nWritten;
-    }
-    return true;
-}
-
 static ControlRequest* ReadControlRequest(HANDLE h) {
     u32 size = 0;
     if (!ReadExact(h, &size, sizeof(size))) {
@@ -2206,7 +2180,7 @@ static bool WriteControlResponse(HANDLE h, ControlRequest* req) {
 
 // returns true if the app is quitting, so the listener thread should exit
 // instead of blocking in ConnectNamedPipe (ASan shutdown hangs on that)
-static bool ProcessControlConnection(HANDLE h) {
+bool ProcessControlConnection(HANDLE h) {
     for (;;) {
         ControlRequest* req = ReadControlRequest(h);
         if (!req) {
@@ -2231,46 +2205,6 @@ static bool ProcessControlConnection(HANDLE h) {
         DeleteControlRequest(req);
         if (!ok || isQuit) {
             return isQuit;
-        }
-    }
-}
-
-static WStr FullPipeNameOwned(Str pipeName) {
-    if (str::StartsWith(pipeName, StrL(R"(\\.\pipe\)"))) {
-        return ToWStr(pipeName);
-    }
-    TempStr fullName = str::JoinTemp(StrL(R"(\\.\pipe\)"), pipeName);
-    return ToWStr(fullName);
-}
-
-struct ControlThreadArg {
-    Str pipeName;
-};
-
-static void SumatraControlThread(ControlThreadArg* arg) {
-    WStr pipeNameW = FullPipeNameOwned(arg->pipeName);
-    str::FreePtr(&arg->pipeName);
-    delete arg;
-
-    for (;;) {
-        HANDLE pipe = CreateNamedPipeW(pipeNameW.s, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
-                                       1, 64 * 1024, 64 * 1024, 0, nullptr);
-        if (pipe == INVALID_HANDLE_VALUE) {
-            logf("CreateNamedPipeW failed for control pipe, err=%u\n", (unsigned)GetLastError());
-            return;
-        }
-        BOOL connected = ConnectNamedPipe(pipe, nullptr) ? TRUE : (GetLastError() == ERROR_PIPE_CONNECTED);
-        bool stop = false;
-        if (connected) {
-            stop = ProcessControlConnection(pipe);
-        }
-        // DisconnectNamedPipe discards data the client hasn't read yet; wait
-        // until it has, or the Quit reply is lost and the client sees EPIPE
-        FlushFileBuffers(pipe);
-        DisconnectNamedPipe(pipe);
-        CloseHandle(pipe);
-        if (stop) {
-            return;
         }
     }
 }
