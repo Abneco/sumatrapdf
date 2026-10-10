@@ -2,6 +2,9 @@
    License: GPLv3 */
 
 #include "base/Base.h"
+#if defined(SUMATRA_NG)
+#include "VirtKeys.h"
+#endif
 #include "base/Pixmap.h"
 #include "base/WinDynCalls.h"
 #include "base/DirScan.h"

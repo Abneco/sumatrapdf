@@ -2,6 +2,9 @@
    License: GPLv3 */
 
 #include "base/Base.h"
+#if defined(SUMATRA_NG)
+#include "VirtKeys.h"
+#endif
 #include "gui/Dpi.h"
 #include "gui/UIModels.h"
 #include "Settings.h"
