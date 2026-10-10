@@ -142,3 +142,22 @@ void GetQuickAccessCached(StrVec& dirsOut, StrVec& filesOut) {
     filesOut = gQuickAccessFiles;
     gQuickAccessMutex.Unlock();
 }
+
+// Home view: drive roots, then Explorer's Quick access folders and files
+void CollectHomeEntries(Vec<NavFileEntry>& out) {
+    StrVec drives;
+    ListDriveRoots(drives);
+    for (int i = 0; i < len(drives); i++) {
+        AppendHomeDirEntry(out, drives[i]);
+    }
+
+    StrVec dirs;
+    StrVec files;
+    GetQuickAccessCached(dirs, files);
+    for (int i = 0; i < len(dirs); i++) {
+        AppendHomeDirEntry(out, dirs[i]);
+    }
+    for (int i = 0; i < len(files); i++) {
+        AppendHomeFileEntry(out, files[i]);
+    }
+}

@@ -229,7 +229,7 @@ static void ClearNavModel(ListBoxModelNav* m) {
     VecReset(m->entries);
 }
 
-static void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
+void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
     if (!CanOpenFile(path)) {
         return;
     }
@@ -243,25 +243,6 @@ static void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
     e.name = str::Dup(path);
     e.size = ((i64)fad.nFileSizeHigh << 32) | (i64)fad.nFileSizeLow;
     VecAppend(out, e);
-}
-
-// Home view: drive roots, then Explorer's Quick access folders and files
-static void CollectHomeEntries(Vec<NavFileEntry>& out) {
-    StrVec drives;
-    ListDriveRoots(drives);
-    for (int i = 0; i < len(drives); i++) {
-        AppendHomeDirEntry(out, drives[i]);
-    }
-
-    StrVec dirs;
-    StrVec files;
-    GetQuickAccessCached(dirs, files);
-    for (int i = 0; i < len(dirs); i++) {
-        AppendHomeDirEntry(out, dirs[i]);
-    }
-    for (int i = 0; i < len(files); i++) {
-        AppendHomeFileEntry(out, files[i]);
-    }
 }
 
 // Built on a worker thread: listing + filtering + sorting a folder of tens of

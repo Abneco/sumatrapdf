@@ -55,7 +55,7 @@ Str NavEntryBaseName(const NavFileEntry& e) {
 #if !OS_WIN
 // ng: orig's are in base/Win.cpp. Off Windows the "drives" are the root and
 // the user's home directory, and there is no Quick access.
-static void ListDriveRoots(StrVec& out) {
+void ListDriveRoots(StrVec& out) {
     out.Append(StrL("/"));
     const char* home = getenv("HOME");
     Str homeDir = Str((char*)(home ? home : ""));
@@ -69,7 +69,7 @@ bool ListShellQuickAccess(StrVec&, StrVec&) {
 }
 #endif
 
-static void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
+void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
     if (!CanOpenFile(path)) {
         return;
     }
@@ -91,25 +91,6 @@ static void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path) {
     e.name = str::Dup(path);
     e.size = size;
     VecAppend(out, e);
-}
-
-// Home view: drive roots, then Explorer's Quick access folders and files
-static void CollectHomeEntries(Vec<NavFileEntry>& out) {
-    StrVec drives;
-    ListDriveRoots(drives);
-    for (int i = 0; i < len(drives); i++) {
-        AppendHomeDirEntry(out, drives[i]);
-    }
-
-    StrVec dirs;
-    StrVec files;
-    GetQuickAccessCached(dirs, files);
-    for (int i = 0; i < len(dirs); i++) {
-        AppendHomeDirEntry(out, dirs[i]);
-    }
-    for (int i = 0; i < len(files); i++) {
-        AppendHomeFileEntry(out, files[i]);
-    }
 }
 
 // Built on a worker thread: listing + filtering + sorting a folder of tens of

@@ -15,3 +15,9 @@ void GetQuickAccessCached(StrVec& dirsOut, StrVec& filesOut);
 
 // base/Win.cpp on Windows, a stub in ng elsewhere
 bool ListShellQuickAccess(StrVec& dirsOut, StrVec& filesOut);
+void ListDriveRoots(StrVec& out);
+
+void CollectHomeEntries(Vec<NavFileEntry>& out);
+
+// implemented by each app
+void AppendHomeFileEntry(Vec<NavFileEntry>& out, Str path);

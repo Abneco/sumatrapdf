@@ -42,9 +42,9 @@
 #include "gui/WasmBridge.h"
 #endif
 #include "Screenshot.h"
+#include "AppHelpersCommon.h"
 #if OS_WIN
 #include "ScreenshotCapture.h"
-#include "AppHelpersCommon.h"
 #endif
 
 #include "SumatraLog.h"
