@@ -1824,6 +1824,27 @@ void PaletteView::OnThumbScroll(PaletteView*, gp::Ctx* cx, const gp::ScrollEvent
     gp::Notify(cx);
 }
 
+// a key drawn as a key cap: light fill, darker rounded border
+static gp::El* KeyCap(gp::Ctx* cx, gp::El* text) {
+    constexpr float kKeyCapMinDx = 22;
+    constexpr float kKeyCapPadX = 5;
+    constexpr float kKeyCapPadY = 1;
+    constexpr float kKeyCapRadius = 4;
+    const gp::Theme& th = gp::ThemeNow(cx->app);
+    return gp::Div(cx->a)
+        ->FlexRow()
+        ->Shrink0()
+        ->ItemsCenter()
+        ->JustifyCenter()
+        ->MinW(kKeyCapMinDx)
+        ->PadX(kKeyCapPadX)
+        ->PadY(kKeyCapPadY)
+        ->Radius(kKeyCapRadius)
+        ->Bg(th.tokens.muted)
+        ->Border(1, th.border)
+        ->Child(text);
+}
+
 static TempStr RightColumnTemp(ItemDataCP* data) {
     if (data->cmdId != 0) {
         return CommandPaletteShortcutTemp(data->cmdId);
@@ -1916,6 +1937,9 @@ static gp::El* BuildList(CommandPaletteWnd* wnd, gp::Ctx* cx, float listDy) {
                 rightEl->Shrink0();
             }
             row->Child(gp::Div(cx->a)->W(8)->Shrink0());
+            if (data->cmdId != 0) {
+                rightEl = KeyCap(cx, rightEl);
+            }
             row->Child(rightEl);
         }
         list->Child(row);
@@ -2046,6 +2070,7 @@ static gp::El* BuildSwitchRow(CommandPaletteWnd* wnd, gp::Ctx* cx) {
         gp::El* el = gp::Div(cx->a)
                          ->FlexRow()
                          ->ItemsCenter()
+                         ->Gap(4)
                          ->PadX(8)
                          ->H(20)
                          ->Radius(4)
@@ -2053,12 +2078,7 @@ static gp::El* BuildSwitchRow(CommandPaletteWnd* wnd, gp::Ctx* cx) {
                          ->PathClick(GpuiDup(cx->a, fmt("palette-switch-%d", prefixIdx)))
                          ->OnClick(gp::ListenTo(gPaletteView, &PaletteView::OnSwitchClick, (intptr_t)prefixIdx));
         // the leading character is the prefix: draw it as a key cap, as orig does
-        el->Child(gp::TextEl(cx->a, GpuiDup(cx->a, Str(label.s, 1)))
-                      ->Font(12)
-                      ->Fg(th.foreground)
-                      ->Bg(th.tokens.muted)
-                      ->Radius(3)
-                      ->PadX(4));
+        el->Child(KeyCap(cx, gp::TextEl(cx->a, GpuiDup(cx->a, Str(label.s, 1)))->Font(12)->Fg(th.foreground)));
         el->Child(gp::TextEl(cx->a, GpuiDup(cx->a, Str(label.s + 1, len(label) - 1)))->Font(12)->Fg(th.mutedFg));
         row->Child(el);
     };
@@ -2086,10 +2106,13 @@ static gp::El* BuildHelpRow(CommandPaletteWnd* wnd, gp::Ctx* cx) {
     TempStr filter = CommandPaletteSkipWS(QueryTemp());
     int kind = PaletteHelpKind(filter, wnd->smartTabMode);
     Str strings[4];
+    // "Release Ctrl select": the key is the first 2 words
+    int keyWords[4] = {1, 1, 1, 1};
     int nHelp = 0;
     switch (kind) {
         case kHelpSmartTab:
             strings[nHelp++] = Tr("Ctrl+Tab navigate");
+            keyWords[nHelp] = 2;
             strings[nHelp++] = Tr("Release Ctrl select");
             strings[nHelp++] = Tr("Space for sticky mode");
             strings[nHelp++] = Tr("Del close tab");
@@ -2134,7 +2157,21 @@ static gp::El* BuildHelpRow(CommandPaletteWnd* wnd, gp::Ctx* cx) {
     }
     gp::El* row = gp::Div(cx->a)->FlexRow()->W(gp::kFill)->JustifyCenter()->ItemsCenter()->Gap(12)->Shrink0();
     for (int i = 0; i < nHelp; i++) {
-        row->Child(gp::TextEl(cx->a, GpuiDup(cx->a, strings[i]))->Font(11)->Fg(th.mutedFg));
+        Str s = strings[i];
+        int keyLen = 0;
+        for (int w = 0; w < keyWords[i] && keyLen < len(s); w++) {
+            keyLen += (w > 0);
+            while (keyLen < len(s) && s.s[keyLen] != ' ') {
+                keyLen++;
+            }
+        }
+        Str key = Str(s.s, keyLen);
+        Str desc = keyLen < len(s) ? Str(s.s + keyLen + 1, len(s) - keyLen - 1) : Str();
+
+        gp::El* hint = gp::Div(cx->a)->FlexRow()->ItemsCenter()->Gap(4);
+        hint->Child(KeyCap(cx, gp::TextEl(cx->a, GpuiDup(cx->a, key))->Font(11)->Fg(th.foreground)));
+        hint->Child(gp::TextEl(cx->a, GpuiDup(cx->a, desc))->Font(11)->Fg(th.mutedFg));
+        row->Child(hint);
     }
     return row;
 }
@@ -2392,7 +2429,7 @@ static gp::El* PaletteCard(CommandPaletteWnd* wnd, gp::Ctx* cx, RectF bounds) {
     if (!wnd->smartTabMode) {
         card->Child(BuildSwitchRow(wnd, cx));
     }
-    float listDy = bounds.dy - (wnd->smartTabMode ? 70.f : 96.f);
+    float listDy = bounds.dy - (wnd->smartTabMode ? 74.f : 100.f);
     bool settingHelp = !wnd->thumbnailMode && ShowsSettingHelp(wnd);
     if (settingHelp) {
         listDy -= kSettingHelpDy + kPaletteGapDy;
