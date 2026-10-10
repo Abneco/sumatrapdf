@@ -45,14 +45,11 @@
 #include "gui/DocCanvas.h"
 #include "gui/Sidebar.h"
 #include "Menu.h"
+#include "MenuCommon.h"
 
 #include "SumatraLog.h"
 
 constexpr uint kMenuSeparatorID = (uint)-13;
-
-static bool ShowDebugMenu() {
-    return gIsDebugBuild || gIsPreReleaseBuild;
-}
 
 // note: IDM_VIEW_SINGLE_PAGE - IDM_VIEW_CONTINUOUS and also
 //       CmdZoomFIT_PAGE - CmdZoomCUSTOM must be in a continuous range!
@@ -570,7 +567,6 @@ static MenuDef menuDefFavorites[] = {
     },
 };
 //] ACCESSKEY_GROUP Favorites Menu
-
 
 //[ ACCESSKEY_GROUP Help Menu
 static MenuDef menuDefHelp[] = {
@@ -1516,32 +1512,6 @@ static void AppendCommandsToMenu(MenuModel* menu, const Vec<CustomCommand*>& cmd
     }
 }
 
-struct FileHistoryEntry {
-    Str path;
-    int cmdId;
-};
-
-static void SetFileHistoryCmdIds(Vec<FileHistoryEntry>& files) {
-    Vec<CustomCommand*> cmds;
-    GetCommandsWithOrigId(cmds, CmdFileHistory);
-    for (CustomCommand* cmd : cmds) {
-        Str path = GetCommandStringArg(cmd, kCmdArgFilePath, {});
-        for (FileHistoryEntry& fe : files) {
-            if (fe.cmdId == 0 && str::EqI(path, fe.path)) {
-                fe.cmdId = cmd->id;
-                break;
-            }
-        }
-    }
-    for (FileHistoryEntry& fe : files) {
-        if (fe.cmdId != 0) {
-            continue;
-        }
-        CommandArg* arg = NewStringArg(kCmdArgFilePath, fe.path);
-        fe.cmdId = CreateCustomCommand(StrL("CmdFileHistory"), CmdFileHistory, arg)->id;
-    }
-}
-
 static void AppendRecentFilesToMenu(MenuModel* menu) {
     if (!CanAccessDisk()) {
         return;
@@ -1996,15 +1966,6 @@ TempStr ContextMenuAtPointResultTemp(MainWindow* win, int x, int y) {
 
 // --- the page context menu (orig's OnWindowContextMenu) ---------------------
 
-// s could be in format "file://path.pdf#page=1" or "mailto:foo@bar.com"
-// We only want the "path.pdf" / "foo@bar.com"
-static TempStr CleanupURLForClipbardCopyTemp(Str s) {
-    Str slice = s;
-    str::TrimPrefix(slice, StrL("file:"));
-    str::TrimPrefix(slice, StrL("mailto:"));
-    return str::DupTemp(slice);
-}
-
 // orig puts the whole menu bar under a "Menu" row at the top while full screen
 static void PrependMenuBarSubmenu(MenuModel* popup, MenuModel* bar) {
     MenuItemModel item;
@@ -2448,43 +2409,6 @@ void ToggleMenuBar(MainWindow* win, bool showTemporarily) {
         gSettings->showMenubarWithTabs = !hideMenu;
     }
     win->RedrawAll();
-}
-
-// Remove Win32's '&' accelerator markup and remember the first character that
-// needs an underline. A doubled ampersand is a literal one. ng: orig draws the
-// underline itself (DrawMenuText); gpui's menu takes a plain label, so only
-// `display` is used and the access key drives Alt+<key> (see "UI differences").
-MenuAccelText ParseMenuAccelTextTemp(Str s) {
-    MenuAccelText res;
-    if (!str::Contains(s, StrL("&"))) {
-        res.display = s;
-        return res;
-    }
-    char* buf = AllocArrayTemp<char>(len(s) + 1);
-    int out = 0;
-    for (int i = 0; i < len(s); i++) {
-        if (s.s[i] != '&') {
-            buf[out++] = s.s[i];
-            continue;
-        }
-        if (i + 1 >= len(s)) {
-            break;
-        }
-        if (s.s[i + 1] == '&') {
-            buf[out++] = '&';
-            i++;
-            continue;
-        }
-        if (res.underlineOff < 0) {
-            res.underlineOff = out;
-            int remain = len(s) - i - 1;
-            int n = utf8RuneLen((const u8*)(s.s + i + 1));
-            res.underlineLen = std::min(std::max(n, 1), remain);
-        }
-    }
-    buf[out] = 0;
-    res.display = Str(buf, out);
-    return res;
 }
 
 // the ASCII letter that opens this menu with Alt, lower-cased; 0 if it has none

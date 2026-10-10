@@ -54,6 +54,7 @@
 #include "TableOfContents.h"
 #include "SidebarPanel.h"
 #include "Menu.h"
+#include "MenuCommon.h"
 
 // value associated with menu item for owner-drawn purposes
 struct MenuOwnerDrawInfo {
@@ -69,9 +70,6 @@ struct MenuOwnerDrawInfo {
 constexpr UINT kMenuSeparatorID = (UINT)-13;
 
 static bool gAddCrashMeMenu = false;
-static bool ShowDebugMenu() {
-    return gIsDebugBuild || gIsPreReleaseBuild;
-}
 
 // note: IDM_VIEW_SINGLE_PAGE - IDM_VIEW_CONTINUOUS and also
 //       CmdZoomFIT_PAGE - CmdZoomCUSTOM must be in a continuous range!
@@ -667,7 +665,6 @@ static MenuDef menuDefFavorites[] = {
     },
 };
 //] ACCESSKEY_GROUP Favorites Menu
-
 
 //[ ACCESSKEY_GROUP Help Menu
 static MenuDef menuDefHelp[] = {
@@ -1454,37 +1451,6 @@ static bool CmdIdInList(UINT_PTR cmdId, UINT_PTR* idsList, int n) {
 }
 
 #define cmdIdInList(name) CmdIdInList(cmdId, name, dimof(name))
-
-struct FileHistoryEntry {
-    Str path;
-    int cmdId;
-};
-
-// A recent file is a CmdFileHistory command carrying the path as an argument.
-// Custom commands live until the settings are re-read, so reuse the one already
-// made for a path instead of making one per menu rebuild. One pass over the
-// commands serves all the entries.
-static void SetFileHistoryCmdIds(Vec<FileHistoryEntry>& files) {
-    Vec<CustomCommand*> cmds;
-    GetCommandsWithOrigId(cmds, CmdFileHistory);
-    for (CustomCommand* cmd : cmds) {
-        Str path = GetCommandStringArg(cmd, kCmdArgFilePath, {});
-        for (FileHistoryEntry& fe : files) {
-            if (fe.cmdId == 0 && str::EqI(path, fe.path)) {
-                fe.cmdId = cmd->id;
-                break;
-            }
-        }
-    }
-
-    for (FileHistoryEntry& fe : files) {
-        if (fe.cmdId != 0) {
-            continue;
-        }
-        CommandArg* arg = NewStringArg(kCmdArgFilePath, fe.path);
-        fe.cmdId = CreateCustomCommand(StrL("CmdFileHistory"), CmdFileHistory, arg)->id;
-    }
-}
 
 static void AddFileMenuItem(HMENU menuFile, const FileHistoryEntry& fe, int index) {
     ReportIf(!menuFile);
@@ -2302,15 +2268,6 @@ void ForgetFileFromFrequentlyRead(MainWindow* win, Str filePath) {
     win->RedrawAll(true);
 }
 
-// s could be in format "file://path.pdf#page=1" or "mailto:foo@bar.com"
-// We only want the "path.pdf" / "foo@bar.com"
-static TempStr CleanupURLForClipbardCopyTemp(Str s) {
-    Str slice = s;
-    str::TrimPrefix(slice, StrL("file:"));
-    str::TrimPrefix(slice, StrL("mailto:"));
-    return str::DupTemp(slice);
-}
-
 void OnWindowContextMenu(MainWindow* win, int x, int y) {
     DisplayModel* dm = win->AsFixed();
     ReportIf(!dm);
@@ -2701,47 +2658,6 @@ static TempStr ParseMenuTextTemp(Str sIn, Str* shortcutOut) {
     }
     *shortcutOut = after;
     return str::DupTemp(before);
-}
-
-struct MenuAccelText {
-    Str display;
-    int underlineOff = -1;
-    int underlineLen = 0;
-};
-
-// Remove Win32's '&' accelerator markup and remember the first character that
-// needs an underline. A doubled ampersand is a literal one.
-static MenuAccelText ParseMenuAccelTextTemp(Str s) {
-    MenuAccelText res;
-    if (!str::Contains(s, StrL("&"))) {
-        res.display = s;
-        return res;
-    }
-    char* buf = AllocArrayTemp<char>(len(s) + 1);
-    int out = 0;
-    for (int i = 0; i < len(s); i++) {
-        if (s.s[i] != '&') {
-            buf[out++] = s.s[i];
-            continue;
-        }
-        if (i + 1 >= len(s)) {
-            break;
-        }
-        if (s.s[i + 1] == '&') {
-            buf[out++] = '&';
-            i++;
-            continue;
-        }
-        if (res.underlineOff < 0) {
-            res.underlineOff = out;
-            int remain = len(s) - i - 1;
-            int n = utf8RuneLen((const u8*)(s.s + i + 1));
-            res.underlineLen = std::min(std::max(n, 1), remain);
-        }
-    }
-    buf[out] = 0;
-    res.display = Str(buf, out);
-    return res;
 }
 
 static void DrawMenuText(Gfx* gfx, Str text, Rect rc, u32 flags, PlatformFont* font, Color col) {

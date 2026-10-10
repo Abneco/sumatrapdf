@@ -138,6 +138,8 @@ export const sharedFiles = [
   "src/shared/LaserPointerCursor_win.cpp",
   "src/shared/MainWindowCommon.cpp",
   "src/shared/MainWindowCommon.h",
+  "src/shared/MenuCommon.cpp",
+  "src/shared/MenuCommon.h",
   "src/shared/NavFilesInFolderCommon.cpp",
   "src/shared/NavFilesInFolderCommon.h",
   "src/shared/OleDragDropCommon.h",
