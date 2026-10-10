@@ -44,3 +44,5 @@ constexpr float kFreeTextLineHeight = 1.2f;
 // with the caret mark at the middle of the left edge; file attachment is
 // {12,12,12+16,12+16}.
 constexpr float kStampAnnotDefaultDx = 190.f;
+
+bool AppendInkPoint(MainWindow* win, DisplayModel* dm, Point pt);

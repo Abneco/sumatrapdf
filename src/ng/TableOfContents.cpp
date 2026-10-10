@@ -164,38 +164,6 @@ void ToggleTocBox(MainWindow* win) {
     SidebarToggleBookmarks(win);
 }
 
-// find the closest item in tree view to a given page number
-static TocItem* TreeItemForPageNo(TocTree* tm, int pageNo) {
-    if (!tm) {
-        return nullptr;
-    }
-    VistorForPageNoData d;
-    d.pageNo = pageNo;
-    auto fn = MkFunc1<VistorForPageNoData, TreeItemVisitorData*>(visitTree, &d);
-    VisitTreeModelItems(tm, fn);
-    // if there's only one item, we want to unselect it so that it can
-    // be selected by the user
-    if (d.nItems < 2) {
-        return nullptr;
-    }
-    return d.bestMatch;
-}
-
-// closest item (in tree order) whose loc.chapter matches, preferring an exact
-// pageNo match; chaptered docs need chapter-first matching because unresolved
-// items all share pageNo == -1, so TreeItemForPageNo can't tell them apart
-static TocItem* TreeItemForChapter(TocTree* tm, int chapter, int pageNo) {
-    if (!tm || chapter < 1) {
-        return nullptr;
-    }
-    VisitorForChapterData d;
-    d.chapter = chapter;
-    d.pageNo = pageNo;
-    auto fn = MkFunc1<VisitorForChapterData, TreeItemVisitorData*>(visitTreeForChapter, &d);
-    VisitTreeModelItems(tm, fn);
-    return d.match;
-}
-
 // Fill win->tocMatchingItems with every entry that should look "current" for
 // bestMatch: all TOC items on the same page, plus the ancestor chain (so a
 // nested 6 / 6.1 / 6.1.1 path all highlight together). The tree has only one
@@ -505,19 +473,6 @@ static void SaveAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
     TempStr dir = path::GetDirTemp(tab->filePath);
     TempStr dstPath = path::JoinTemp(dir, path::GetBaseNameTemp(fileName));
     SaveDataToFile(tab->win, dstPath, data);
-    str::Free(data);
-}
-
-static void OpenAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
-    if (!tab || !tab->AsFixed()) {
-        return;
-    }
-    EngineBase* engine = tab->AsFixed()->GetEngine();
-    Str data = EngineMupdfLoadAttachment(engine, attachmentNo);
-    if (len(data) == 0) {
-        return;
-    }
-    OpenDocumentFromMemory(tab->win, data, fileName);
     str::Free(data);
 }
 

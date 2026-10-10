@@ -20,6 +20,7 @@
 #include "Notifications.h"
 #include "SumatraPDF.h"
 #include "MainWindow.h"
+#include "Toolbar.h"
 #include "WindowTab.h"
 #include "Commands.h"
 #include "AppTools.h"
@@ -1191,4 +1192,70 @@ void UpdateMatchCount(MainWindow* win, Str text) {
     } else {
         StartFindCount(win, text, win->findMatchCase, win->findMatchWholeWord);
     }
+}
+
+// payload: "<gen> <total> <records>", records separated by \x1e (record sep),
+// each "<page>\x1f<idx>\x1f<snippet>" (\x1f: unit sep). Built by searchAll()
+// in kFindInPageJs (BrowserDocView.cpp)
+// all-pages find result posted by a chm / markdown webview: rebuild win->findMatches
+void BrowserFindAllResultReceived(MainWindow* win, Str payload) {
+    int gen = 0;
+    int total = 0;
+    Str rest = str::Parse(payload, "%d %d ", &gen, &total);
+    if (str::IsNull(rest) || gen != win->browserFindGen || !IsFindUIVisible(win)) {
+        return;
+    }
+    DocController* md = BrowserFindCtrl(win);
+    if (!md) {
+        return;
+    }
+    int pageCur = win->browserFindPageCurrent; // survives the ClearFindMatches below
+    ClearFindMatches(win);
+    win->browserFindPageCurrent = pageCur;
+    while (rest.len > 0) {
+        int recLen = rest.len;
+        for (int i = 0; i < rest.len; i++) {
+            if (rest.s[i] == '\x1e') {
+                recLen = i;
+                break;
+            }
+        }
+        Str rec = Str(rest.s, recLen);
+        rest = (recLen < rest.len) ? Str(rest.s + recLen + 1, rest.len - recLen - 1) : Str();
+        int page = 0;
+        int idx = 0;
+        Str snippet = str::Parse(rec, "%d\x1f%d\x1f", &page, &idx);
+        if (str::IsNull(snippet)) {
+            continue;
+        }
+        FindMatch fm;
+        fm.startPage = page;
+        fm.startGlyph = idx;
+        fm.endPage = page;
+        fm.endGlyph = idx;
+        fm.snippet = str::Dup(snippet);
+        VecAppend(win->findMatches, fm);
+    }
+    win->browserFindTotal = total;
+    win->findCountHasSnippets = true;
+    BrowserFindUpdateStatus(win, md, win->browserFindPageCurrent, total); // also refreshes the results list
+    // Enable/disable Find Next/Prev once we know whether any matches exist.
+    ToolbarUpdateStateForWindow(win, false);
+}
+
+// update the find bar with "n / m" from the (valid) cache and the current match
+void ShowMatchCount(MainWindow* win) {
+    if (!win->findCountValid) {
+        return; // count not ready yet; leave whatever status is showing
+    }
+    int total = len(win->findCountPositions);
+    int n = 0;
+    DisplayModel* dm = win->AsFixed();
+    if (dm && dm->textSearch) {
+        u64 key = MatchKey(dm->textSearch->startPage, dm->textSearch->startGlyph);
+        n = MatchIndexInCache(win, key);
+    }
+    TempStr s = fmt("%d / %d%s", n, total, Str(win->findCountCapped ? "+" : ""));
+    FindBarSetStatus(win, s, total);
+    logf("ShowMatchCount: %s (page %d)\n", s, dm && dm->textSearch ? dm->textSearch->startPage : 0);
 }

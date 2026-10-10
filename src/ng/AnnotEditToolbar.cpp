@@ -2203,58 +2203,6 @@ void CloseAnnotationUiForTab(WindowTab* tab) {
     ClearAnnotFilterAnnotations(win);
 }
 
-void DeleteAnnotationAndUpdateUI(WindowTab* tab, Annotation* annot) {
-    if (!annot || !tab) {
-        return;
-    }
-    Annotation* keepSelected = annot == tab->selectedAnnotation ? nullptr : tab->selectedAnnotation;
-
-    DetachAnnotationFromUI(annot);
-    DeleteAnnotation(annot);
-    RefreshAnnotationLists(tab);
-    SetSelectedAnnotation(tab, keepSelected);
-    if (IsMainWindowValidAndNotClosing(tab->win)) {
-        MainWindowRerender(tab->win);
-        ToolbarUpdateStateForWindow(tab->win, true);
-    }
-}
-
-// GoToPage / canvas scroll for the current selection. Posted so holding
-// arrows in the annot list can keep moving the caret (issue #6009).
-void ShowSelectedAnnotationView(WindowTab* tab) {
-    if (!tab) {
-        return;
-    }
-    tab->pendingShowSelectedAnnotation = false;
-    if (!IsMainWindowValidAndNotClosing(tab->win)) {
-        return;
-    }
-    MainWindow* win = tab->win;
-    bool tabOpen = false;
-    for (WindowTab* t : win->Tabs()) {
-        if (t == tab) {
-            tabOpen = true;
-            break;
-        }
-    }
-    if (!tabOpen) {
-        return;
-    }
-    Annotation* annot = tab->selectedAnnotation;
-    DisplayModel* dm = tab->AsFixed();
-    if (AnnotationIsLive(annot) && dm) {
-        int pageNo = annot->pageNo;
-        int nPages = dm->PageCount();
-        if (pageNo < 1 || pageNo > nPages) {
-            logf("ShowSelectedAnnotationView: invalid pageNo=%d nPages=%d\n", pageNo, nPages);
-        } else if (!dm->PageVisible(pageNo)) {
-            dm->GoToPage(pageNo, true);
-        }
-    }
-    win->RedrawAll(true);
-    ToolbarUpdateStateForWindow(win, false);
-}
-
 void SetSelectedAnnotation(WindowTab* tab, Annotation* annot) {
     if (!tab) {
         return;

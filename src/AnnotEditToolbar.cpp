@@ -2295,21 +2295,6 @@ void CloseAnnotationUiForTab(WindowTab* tab) {
     ClearAnnotFilterAnnotations(win);
 }
 
-void DeleteAnnotationAndUpdateUI(WindowTab* tab, Annotation* annot) {
-    if (!annot) {
-        return;
-    }
-    Annotation* keepSelected = annot == tab->selectedAnnotation ? nullptr : tab->selectedAnnotation;
-
-    DetachAnnotationFromUI(annot);
-    DeleteAnnotation(annot);
-    RefreshAnnotationLists(tab);
-    SetSelectedAnnotation(tab, keepSelected);
-    if (IsMainWindowValidAndNotClosing(tab->win)) {
-        MainWindowRerender(tab->win);
-    }
-}
-
 // Type on the left, optional contents in muted color, page number on the right.
 // Contents is clipped so it cannot paint over the page column.
 void DrawAnnotationListRow(Gfx* gfx, PlatformFont* font, Rect rc, Annotation* annot, const StrVec& filterWords,
@@ -2630,43 +2615,6 @@ TempStr AnnotationHoverOverlayStateTemp(MainWindow* win) {
                    overlay->isAbove ? 1 : 0, r.x, r.y, r.dx, r.dy, a.x, a.y, a.dx, a.dy));
     out.Append(overlay->rowsDump);
     return ToStrTemp(out);
-}
-
-// GoToPage / canvas scroll for the current selection. Posted so holding
-// arrows in the annot list can keep moving the caret (issue #6009). Find
-// uses ScheduleRepaint, not MainWindowRerender, for the same reason.
-void ShowSelectedAnnotationView(WindowTab* tab) {
-    if (!tab) {
-        return;
-    }
-    tab->pendingShowSelectedAnnotation = false;
-    if (!IsMainWindowValidAndNotClosing(tab->win)) {
-        return;
-    }
-    MainWindow* win = tab->win;
-    bool tabOpen = false;
-    for (WindowTab* t : win->Tabs()) {
-        if (t == tab) {
-            tabOpen = true;
-            break;
-        }
-    }
-    if (!tabOpen) {
-        return;
-    }
-    Annotation* annot = tab->selectedAnnotation;
-    DisplayModel* dm = tab->AsFixed();
-    if (AnnotationIsLive(annot) && dm) {
-        int pageNo = annot->pageNo;
-        int nPages = dm->PageCount();
-        if (pageNo < 1 || pageNo > nPages) {
-            logf("ShowSelectedAnnotationView: invalid pageNo=%d nPages=%d\n", pageNo, nPages);
-        } else if (!dm->PageVisible(pageNo)) {
-            dm->GoToPage(pageNo, true);
-        }
-    }
-    ScheduleRepaint(win, 0);
-    ToolbarUpdateStateForWindow(win, false);
 }
 
 void SetSelectedAnnotation(WindowTab* tab, Annotation* annot) {

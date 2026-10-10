@@ -193,6 +193,7 @@ export const sharedFiles = [
   "src/shared/TableOfContentsCommon.cpp",
   "src/shared/TableOfContentsCommon.h",
   "src/shared/TabsCommon.cpp",
+  "src/shared/TabsCommon.h",
   "src/shared/ToolbarCommon.cpp",
   "src/shared/ToolbarCommon.h",
   "src/shared/UpdateCheckCommon.cpp",

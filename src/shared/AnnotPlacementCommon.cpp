@@ -467,3 +467,70 @@ bool AnnotationPlacementOnSetCursor(MainWindow* win) {
     SetPlacementCursor(win);
     return true;
 }
+
+constexpr int kInkEraserRadiusPx = 10;
+
+bool AppendInkPoint(MainWindow* win, DisplayModel* dm, Point pt) {
+    AnnotPlacement& p = win->annotPlacement;
+    int pageNo = p.pageNo;
+    if (!dm || !dm->ValidPageNo(pageNo) || dm->GetPageNoByPoint(pt) != pageNo || len(p.strokeCounts) == 0) {
+        return false;
+    }
+    if (VecLast(p.strokeCounts) > 0) {
+        Point previous = dm->CvtToScreen(pageNo, VecLast(p.points));
+        if (previous == pt) {
+            return false;
+        }
+    }
+    VecAppend(p.points, dm->CvtFromScreen(pt, pageNo));
+    VecLast(p.strokeCounts)++;
+    win->RedrawCanvas();
+    return true;
+}
+
+bool AnnotationPlacementEraseAt(MainWindow* win, Point pt) {
+    if (!IsPlacingInkAnnotation(win)) {
+        return false;
+    }
+    DisplayModel* dm = win->AsFixed();
+    WindowTab* tab = win->CurrentTab();
+    EngineBase* engine = dm ? dm->GetEngine() : nullptr;
+    int pageNo = dm ? dm->GetPageNoByPoint(pt) : -1;
+    if (!dm || !tab || !engine || !dm->ValidPageNo(pageNo)) {
+        return true;
+    }
+
+    PointF pagePt = dm->CvtFromScreen(pt, pageNo);
+    float radius = (float)DpiScale(kInkEraserRadiusPx) / PxPerPagePt(dm, pageNo);
+    AnnotPlacement& p = win->annotPlacement;
+    bool pendingChanged = false;
+    if (p.pageNo == pageNo) {
+        pendingChanged = EraseInkStrokes(p.strokeCounts, p.points, pagePt, radius);
+        if (len(p.strokeCounts) == 0) {
+            p.pageNo = -1;
+        }
+    }
+
+    bool savedChanged = false;
+    Vec<Annotation*> annots;
+    EngineMupdfGetLoadedAnnotations(engine, annots);
+    for (Annotation* annot : annots) {
+        if (Type(annot) != AnnotationType::Ink || PageNo(annot) != pageNo) {
+            continue;
+        }
+        InkEraseResult result = EraseAnnotationInk(annot, pagePt, radius);
+        if (result == InkEraseResult::Empty) {
+            DeleteAnnotationAndUpdateUI(tab, annot);
+            savedChanged = true;
+        } else if (result == InkEraseResult::Changed) {
+            savedChanged = true;
+        }
+    }
+    if (savedChanged) {
+        RefreshAnnotationLists(tab);
+        MainWindowRerender(win);
+    } else if (pendingChanged) {
+        win->RedrawCanvas();
+    }
+    return true;
+}

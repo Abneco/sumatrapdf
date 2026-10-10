@@ -62,3 +62,5 @@ void SetPdfAnnotationsToolbarEnabled(MainWindow* win, bool enabled);
 // the "Edit PDF" row under the toolbar
 extern ToolbarButtonInfo gPdfAnnotationButtons[];
 extern const int kPdfAnnotationButtonsCount;
+
+bool IsCmdAvailable(MainWindow* win, int cmdId, AppCommandCtx* ctx);

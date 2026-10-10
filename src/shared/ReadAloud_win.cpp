@@ -1434,11 +1434,9 @@ static void WinTtsStop() {
 
 //--- public interface
 
-#if defined(SUMATRA_NG)
 bool TtsIsAvailable() {
     return true;
 }
-#endif
 
 void TtsSetNotifyWindow(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     gTtsNotifyHwnd = hwnd;

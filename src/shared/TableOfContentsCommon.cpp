@@ -455,3 +455,48 @@ void GoToTocItem(MainWindow* win, TocItem* tocItem) {
     auto fn = MkFunc0<GoToTocLinkData>(GoToTocLink, data);
     uitask::Post(fn, "TaskGoToTocFromPalette");
 }
+
+// find the closest item in tree view to a given page number
+TocItem* TreeItemForPageNo(TreeModel* tm, int pageNo) {
+    if (!tm) {
+        return nullptr;
+    }
+    VistorForPageNoData d;
+    d.pageNo = pageNo;
+    auto fn = MkFunc1<VistorForPageNoData, TreeItemVisitorData*>(visitTree, &d);
+    VisitTreeModelItems(tm, fn);
+    // if there's only one item, we want to unselect it so that it can
+    // be selected by the user
+    if (d.nItems < 2) {
+        return nullptr;
+    }
+    return d.bestMatch;
+}
+
+// closest item (in tree order) whose loc.chapter matches, preferring an exact
+// pageNo match; chaptered docs need chapter-first matching because unresolved
+// items all share pageNo == -1, so TreeItemForPageNo can't tell them apart
+TocItem* TreeItemForChapter(TreeModel* tm, int chapter, int pageNo) {
+    if (!tm || chapter < 1) {
+        return nullptr;
+    }
+    VisitorForChapterData d;
+    d.chapter = chapter;
+    d.pageNo = pageNo;
+    auto fn = MkFunc1<VisitorForChapterData, TreeItemVisitorData*>(visitTreeForChapter, &d);
+    VisitTreeModelItems(tm, fn);
+    return d.match;
+}
+
+void OpenAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
+    if (!tab || !tab->AsFixed()) {
+        return;
+    }
+    EngineBase* engine = tab->AsFixed()->GetEngine();
+    Str data = EngineMupdfLoadAttachment(engine, attachmentNo);
+    if (len(data) == 0) {
+        return;
+    }
+    OpenDocumentFromMemory(tab->win, data, fileName);
+    str::Free(data);
+}

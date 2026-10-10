@@ -28,6 +28,7 @@
 #include "FileHistory.h"
 #include "Translations.h"
 #include "Tabs.h"
+#include "TabsCommon.h"
 
 // always full path (FullPathInTitle only affects tab/window title text).
 // Append size when GetSize succeeds (may fail for offline network paths).
@@ -86,4 +87,56 @@ void CloseCollectedTabs(MainWindow* win, const Vec<WindowTab*>& toClose) {
         }
         CloseTab(t, false);
     }
+}
+
+// orig's CloseWindowIfNoDocuments: a window whose last document tab was
+// dragged out goes away
+void CloseWindowIfNoDocuments(MainWindow* win) {
+    for (WindowTab* tab : win->Tabs()) {
+        if (!tab->IsAboutTab()) {
+            return;
+        }
+    }
+    CloseWindow(win, true, false);
+}
+
+// create a new window if win==nullptr
+void CollectTabsToClose(MainWindow* win, WindowTab* currTab, Vec<WindowTab*>& toCloseOther,
+                        Vec<WindowTab*>& toCloseRight, Vec<WindowTab*>& toCloseLeft) {
+    int nTabs = win->TabCount();
+    bool seenCurrent = false;
+    for (int i = 0; i < nTabs; i++) {
+        WindowTab* tab = win->GetTab(i);
+        if (tab->IsAboutTab()) {
+            continue;
+        }
+        if (currTab == tab) {
+            seenCurrent = true;
+            continue;
+        }
+        VecAppend(toCloseOther, tab);
+        if (seenCurrent) {
+            VecAppend(toCloseRight, tab);
+        } else {
+            VecAppend(toCloseLeft, tab);
+        }
+    }
+}
+
+// Selects the next (or previous) tab.
+void TabsOnCtrlTab(MainWindow* win, bool reverse) {
+    if (!win) {
+        return;
+    }
+    int count = win->TabCount();
+    if (count < 2) {
+        return;
+    }
+    int idx = win->GetTabIdx(win->CurrentTab()) + 1;
+    if (reverse) {
+        idx -= 2;
+    }
+    idx += count; // ensure > 0
+    idx = idx % count;
+    TabsSelect(win, idx);
 }

@@ -211,40 +211,6 @@ void ClearTocBox(MainWindow* win) {
     win->currPageNo = 0;
 }
 
-// find the closest item in tree view to a given page number
-static TocItem* TreeItemForPageNo(TreeView* treeView, int pageNo) {
-    TreeModel* tm = treeView->treeModel;
-    if (!tm) {
-        return nullptr;
-    }
-    VistorForPageNoData d;
-    d.pageNo = pageNo;
-    auto fn = MkFunc1<VistorForPageNoData, TreeItemVisitorData*>(visitTree, &d);
-    VisitTreeModelItems(tm, fn);
-    // if there's only one item, we want to unselect it so that it can
-    // be selected by the user
-    if (d.nItems < 2) {
-        return nullptr;
-    }
-    return d.bestMatch;
-}
-
-// closest item (in tree order) whose loc.chapter matches, preferring an exact
-// pageNo match; chaptered docs need chapter-first matching because unresolved
-// items all share pageNo == -1, so TreeItemForPageNo can't tell them apart
-static TocItem* TreeItemForChapter(TreeView* treeView, int chapter, int pageNo) {
-    TreeModel* tm = treeView->treeModel;
-    if (!tm || chapter < 1) {
-        return nullptr;
-    }
-    VisitorForChapterData d;
-    d.chapter = chapter;
-    d.pageNo = pageNo;
-    auto fn = MkFunc1<VisitorForChapterData, TreeItemVisitorData*>(visitTreeForChapter, &d);
-    VisitTreeModelItems(tm, fn);
-    return d.match;
-}
-
 // Fill win->tocMatchingItems with every entry that should look "current" for
 // bestMatch: all TOC items on the same page, plus the ancestor chain (so a
 // nested 6 / 6.1 / 6.1.1 path all highlight together). TreeView still has only
@@ -320,10 +286,10 @@ void UpdateTocSelection(MainWindow* win, int currPageNo) {
 
     TocItem* item = nullptr;
     if (win->ctrl && win->ctrl->HasChapters()) {
-        item = TreeItemForChapter(treeView, win->ctrl->CurrentLocation().chapter, currPageNo);
+        item = TreeItemForChapter(treeView->treeModel, win->ctrl->CurrentLocation().chapter, currPageNo);
     }
     if (!item) {
-        item = TreeItemForPageNo(treeView, currPageNo);
+        item = TreeItemForPageNo(treeView->treeModel, currPageNo);
     }
     if (win->tocKeepSelection) {
         // the tree selection is deliberately left alone: the user clicked a
@@ -360,10 +326,10 @@ void ExpandTocToCurrentPage(MainWindow* win) {
     TocItem* item = nullptr;
     if (win->ctrl->HasChapters()) {
         // unresolved chaptered items keep pageNo == -1; match by chapter first
-        item = TreeItemForChapter(treeView, win->ctrl->CurrentLocation().chapter, currPageNo);
+        item = TreeItemForChapter(treeView->treeModel, win->ctrl->CurrentLocation().chapter, currPageNo);
     }
     if (!item) {
-        item = TreeItemForPageNo(treeView, currPageNo);
+        item = TreeItemForPageNo(treeView->treeModel, currPageNo);
     }
     if (!item) {
         return;
@@ -419,16 +385,6 @@ static void SaveAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
     fileName = path::GetBaseNameTemp(fileName);
     TempStr dstPath = path::JoinTemp(dir, fileName);
     SaveDataToFile(tab->win->hwndFrame, dstPath, data);
-    str::Free(data);
-}
-
-static void OpenAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
-    EngineBase* engine = tab->AsFixed()->GetEngine();
-    Str data = EngineMupdfLoadAttachment(engine, attachmentNo);
-    if (len(data) == 0) {
-        return;
-    }
-    OpenDocumentFromMemory(tab->win, data, fileName);
     str::Free(data);
 }
 

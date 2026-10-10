@@ -612,6 +612,9 @@
     <ClInclude Include="..\src\shared\Tabs.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\TabsCommon.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\TextSearch.h">
       <Filter>src\shared</Filter>
     </ClInclude>

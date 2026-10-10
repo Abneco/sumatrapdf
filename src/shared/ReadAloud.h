@@ -27,9 +27,7 @@ struct TtsVoiceInfo {
     Str lang;
 };
 
-#if defined(SUMATRA_NG)
 bool TtsIsAvailable();
-#endif
 bool TtsSpeakUtf8(Str text);
 bool TtsQueueUtf8(Str text);
 bool TtsDidStartQueued();

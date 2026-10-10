@@ -50,6 +50,7 @@
 #include "AIChatPanel.h"
 #include "Tabs.h"
 #include "MenuDefs.h"
+#include "TabsCommon.h"
 
 #include "SumatraLog.h"
 
@@ -290,17 +291,6 @@ void RemoveTab(WindowTab* tab) {
     }
 }
 
-// orig's CloseWindowIfNoDocuments: a window whose last document tab was
-// dragged out goes away
-static void CloseWindowIfNoDocuments(MainWindow* win) {
-    for (WindowTab* tab : win->Tabs()) {
-        if (!tab->IsAboutTab()) {
-            return;
-        }
-    }
-    CloseWindow(win, true, false);
-}
-
 // orig's MaybeMigrateTab: a tab dropped outside its strip moves to `newWin`,
 // or to a window of its own when there is none.
 // ng: gpui captures the mouse for the window the drag started in, so a drop on
@@ -377,29 +367,6 @@ void MaybeMigrateTab(WindowTab* tab, MainWindow* newWin) {
     CloseWindowIfNoDocuments(oldWin);
 }
 
-// create a new window if win==nullptr
-void CollectTabsToClose(MainWindow* win, WindowTab* currTab, Vec<WindowTab*>& toCloseOther,
-                        Vec<WindowTab*>& toCloseRight, Vec<WindowTab*>& toCloseLeft) {
-    int nTabs = win->TabCount();
-    bool seenCurrent = false;
-    for (int i = 0; i < nTabs; i++) {
-        WindowTab* tab = win->GetTab(i);
-        if (tab->IsAboutTab()) {
-            continue;
-        }
-        if (currTab == tab) {
-            seenCurrent = true;
-            continue;
-        }
-        VecAppend(toCloseOther, tab);
-        if (seenCurrent) {
-            VecAppend(toCloseRight, tab);
-        } else {
-            VecAppend(toCloseLeft, tab);
-        }
-    }
-}
-
 void CloseAllTabs(MainWindow* win) {
     if (!win || win->isBeingClosed) {
         return;
@@ -428,24 +395,6 @@ void TabsOnCloseWindow(MainWindow* win) {
     VecReset(win->tabs);
     DeleteVecMembers(tabs);
     VecReset(*win->tabSelectionHistory);
-}
-
-// Selects the next (or previous) tab.
-void TabsOnCtrlTab(MainWindow* win, bool reverse) {
-    if (!win) {
-        return;
-    }
-    int count = win->TabCount();
-    if (count < 2) {
-        return;
-    }
-    int idx = win->GetTabIdx(win->CurrentTab()) + 1;
-    if (reverse) {
-        idx -= 2;
-    }
-    idx += count; // ensure > 0
-    idx = idx % count;
-    TabsSelect(win, idx);
 }
 
 void MoveTab(MainWindow* win, int dir) {

@@ -39,6 +39,7 @@
 #include "Translations.h"
 #include "Tabs.h"
 #include "MenuDefs.h"
+#include "TabsCommon.h"
 
 void UpdateTabPageText(WindowTab* tab) {
     if (!tab || !tab->win || !tab->win->tabsCtrl) {
@@ -200,16 +201,6 @@ void RemoveTab(WindowTab* tab) {
 #endif
 }
 
-static void CloseWindowIfNoDocuments(MainWindow* win) {
-    for (auto& tab : win->Tabs()) {
-        if (!tab->IsAboutTab()) {
-            return;
-        }
-    }
-    // no tabs or only about tab
-    CloseWindow(win, true, false);
-}
-
 static void MaybeMigrateTab(WindowTab* tab, MainWindow* newWin, Point releasePt) {
     MainWindow* oldWin = tab->win;
 
@@ -325,29 +316,6 @@ extern bool SaveAnnotationsToExistingFile(WindowTab*);
 extern bool SaveAnnotationsToMaybeNewPdfFile(WindowTab*);
 
 // clang-format on
-
-// create a new window if win==nullptr
-void CollectTabsToClose(MainWindow* win, WindowTab* currTab, Vec<WindowTab*>& toCloseOther,
-                        Vec<WindowTab*>& toCloseRight, Vec<WindowTab*>& toCloseLeft) {
-    int nTabs = win->TabCount();
-    bool seenCurrent = false;
-    for (int i = 0; i < nTabs; i++) {
-        WindowTab* tab = win->Tabs()[i];
-        if (tab->IsAboutTab()) {
-            continue;
-        }
-        if (currTab == tab) {
-            seenCurrent = true;
-            continue;
-        }
-        VecAppend(toCloseOther, tab);
-        if (seenCurrent) {
-            VecAppend(toCloseRight, tab);
-        } else {
-            VecAppend(toCloseLeft, tab);
-        }
-    }
-}
 
 void CloseAllTabs(MainWindow* win) {
     if (!win) {
@@ -797,24 +765,6 @@ void SetTabsInTitlebar(MainWindow* win, bool inTitleBar) {
     }
     uint flags = SWP_FRAMECHANGED | SWP_NOZORDER | SWP_NOSIZE | SWP_NOMOVE;
     SetWindowPos(win->hwndFrame, nullptr, 0, 0, 0, 0, flags);
-}
-
-// Selects the next (or previous) tab.
-void TabsOnCtrlTab(MainWindow* win, bool reverse) {
-    if (!win) {
-        return;
-    }
-    int count = win->TabCount();
-    if (count < 2) {
-        return;
-    }
-    int idx = win->tabsCtrl->GetSelected() + 1;
-    if (reverse) {
-        idx -= 2;
-    }
-    idx += count; // ensure > 0
-    idx = idx % count;
-    TabsSelect(win, idx);
 }
 
 void MoveTab(MainWindow* win, int dir) {

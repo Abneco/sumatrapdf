@@ -70,41 +70,6 @@ constexpr int kTextPaddingRight = 6;
 
 // --- availability and enabled state -----------------------------------------
 
-// some commands are only avialble in certain contexts
-// we remove toolbar buttons for un-availalbe commands
-static bool IsCmdAvailable(MainWindow* win, int cmdId, AppCommandCtx* ctx) {
-    switch (cmdId) {
-        case CmdZoomFitWidthAndContinuous:
-        case CmdZoomFitPageAndSinglePage:
-        case CmdRotateLeft:
-        case CmdRotateRight:
-            return !IsBrowserDocController(win->ctrl);
-        case CmdFindFirst:
-            // CHM has its own find bar even though NeedsFindUI() is false for
-            // it; show the Search button so it's reachable
-            return NeedsFindUI(win) || IsBrowserDocController(win->ctrl);
-        case CmdFindNext:
-        case CmdFindPrev:
-        case CmdFindToggleMatchCase:
-        case CmdFindToggleMatchWholeWord:
-            return NeedsFindUI(win);
-        case CmdToggleReadAloud:
-            // opt-in: the button and its drop-down only show if asked for
-            return TtsIsAvailable() && gSettings->toolbarShowReadAloud;
-        case PageInfoId:
-            return true;
-    }
-    // Toolbar buttons stay visible (but disabled) when no document is open, so
-    // decide visibility as if a document were loaded; otherwise the no-document
-    // gate in GetCommandVisibility would remove them.
-    bool savedLoaded = ctx->isDocLoaded;
-    ctx->isDocLoaded = true;
-    bool remove, disable;
-    GetCommandIdState(ctx, cmdId, &remove, &disable);
-    ctx->isDocLoaded = savedLoaded;
-    return !remove;
-}
-
 static bool IsCmdEnabled(MainWindow* win, int cmdId, AppCommandCtx* ctx) {
     switch (cmdId) {
         case CmdNextTab:

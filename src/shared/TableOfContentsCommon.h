@@ -56,3 +56,7 @@ TocItem* FilterTocItemRec(TocItem* item, const StrVec& words);
 
 // implemented by each app
 void GoToTocLink(GoToTocLinkData* d);
+
+TocItem* TreeItemForPageNo(TreeModel* tm, int pageNo);
+TocItem* TreeItemForChapter(TreeModel* tm, int chapter, int pageNo);
+void OpenAttachment(WindowTab* tab, Str fileName, int attachmentNo);
