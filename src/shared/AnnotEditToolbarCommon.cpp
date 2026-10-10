@@ -794,3 +794,63 @@ void CollectPriorityAnnotPages(WindowTab* tab, Annotation* extra, Vec<int>& page
         AddAnnotPage(pages, extra->pageNo, n);
     }
 }
+
+// how wide the stroke of an ink annotation is, from the Thickness slider of
+// its color drop-down
+void ChipThicknessPicked(AnnotEditToolbarBase* tb, int width) {
+    WindowTab* tab = tb->tab;
+    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
+    if (!AnnotationIsLive(annot) || annot != tb->annot) {
+        return;
+    }
+    if (BorderWidth(annot) == width) {
+        return;
+    }
+    SetBorderWidth(annot, width);
+    AnnotChanged(tab);
+}
+
+void ChipOpacityPicked(AnnotEditToolbarBase* tb, int percent) {
+    WindowTab* tab = tb->tab;
+    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
+    if (!AnnotationIsLive(annot) || annot != tb->annot) {
+        return;
+    }
+    int opacity = ((percent * 255) + 50) / 100;
+    if (Opacity(annot) == opacity) {
+        return;
+    }
+    SetOpacity(annot, opacity);
+    AnnotChanged(tab);
+}
+
+void ChipTextSizePicked(AnnotEditToolbarBase* tb, int size) {
+    WindowTab* tab = tb->tab;
+    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
+    if (!AnnotationIsLive(annot) || annot != tb->annot) {
+        return;
+    }
+    if (DefaultAppearanceTextSize(annot) == size) {
+        return;
+    }
+    SetDefaultAppearanceTextSize(annot, size);
+    AnnotChanged(tab);
+}
+
+// tb->annot is non-owning. Save/reload frees the wrapper and only
+// tab->selectedAnnotation is cleared in that path, so compare that first
+// and never call AnnotationIsLive on tb->annot alone.
+Annotation* LiveToolbarAnnot(AnnotEditToolbarBase* tb) {
+    if (!tb || !tb->win) {
+        return nullptr;
+    }
+    WindowTab* tab = tb->win->CurrentTab();
+    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
+    if (!annot || annot != tb->annot || tab != tb->tab) {
+        return nullptr;
+    }
+    if (!AnnotationIsLive(annot)) {
+        return nullptr;
+    }
+    return annot;
+}

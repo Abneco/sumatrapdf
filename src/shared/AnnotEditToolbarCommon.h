@@ -3,6 +3,13 @@
 
 // --- shared by AnnotEditToolbarCommon.cpp and each app's AnnotEditToolbar.cpp ---
 
+// what both apps' AnnotEditToolbar start with: the annotation being edited
+struct AnnotEditToolbarBase {
+    MainWindow* win = nullptr;
+    WindowTab* tab = nullptr;
+    Annotation* annot = nullptr;
+};
+
 enum class AnnotEditKind {
     Color,
     InteriorColor,
@@ -83,3 +90,8 @@ void CollectPriorityAnnotPages(WindowTab* tab, Annotation* extra, Vec<int>& page
 
 // implemented by each app
 void ShowSelectedAnnotationView(WindowTab* tab);
+
+void ChipThicknessPicked(AnnotEditToolbarBase* tb, int width);
+void ChipOpacityPicked(AnnotEditToolbarBase* tb, int percent);
+void ChipTextSizePicked(AnnotEditToolbarBase* tb, int size);
+Annotation* LiveToolbarAnnot(AnnotEditToolbarBase* tb);

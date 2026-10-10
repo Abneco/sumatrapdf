@@ -95,10 +95,7 @@ struct AnnotChipPaint {
     Color fg = 0;
 };
 
-struct AnnotEditToolbar {
-    MainWindow* win = nullptr;
-    WindowTab* tab = nullptr;
-    Annotation* annot = nullptr;
+struct AnnotEditToolbar : AnnotEditToolbarBase {
     Vec<AnnotEditItem> items;
     // where gpui put the card and each chip last frame (one frame late)
     gp::Bounds measured;
@@ -206,24 +203,6 @@ static AnnotEditToolbar* GetOrCreateToolbar(MainWindow* win) {
         win->annotEditToolbar = tb;
     }
     return win->annotEditToolbar;
-}
-
-// tb->annot is non-owning. Save/reload frees the wrapper and only
-// tab->selectedAnnotation is cleared in that path, so compare that first
-// and never call AnnotationIsLive on tb->annot alone.
-static Annotation* LiveToolbarAnnot(AnnotEditToolbar* tb) {
-    if (!tb || !tb->win) {
-        return nullptr;
-    }
-    WindowTab* tab = tb->win->CurrentTab();
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!annot || annot != tb->annot || tab != tb->tab) {
-        return nullptr;
-    }
-    if (!AnnotationIsLive(annot)) {
-        return nullptr;
-    }
-    return annot;
 }
 
 void SetAnnotEditToolbarClickPos(Annotation* annot, PointF pagePt) {
@@ -793,48 +772,6 @@ static void OpenAnnotColorsDialog(AnnotEditToolbar* tb) {
     args->onClose = MkFunc1(AnnotColorDlgPicked, target);
     ShowChangeColorsDialog(args);
     AppShellInvalidate(win);
-}
-
-// how wide the stroke of an ink annotation is, from the Thickness slider of
-// its color drop-down
-static void ChipThicknessPicked(AnnotEditToolbar* tb, int width) {
-    WindowTab* tab = tb->tab;
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!AnnotationIsLive(annot) || annot != tb->annot) {
-        return;
-    }
-    if (BorderWidth(annot) == width) {
-        return;
-    }
-    SetBorderWidth(annot, width);
-    AnnotChanged(tab);
-}
-
-static void ChipOpacityPicked(AnnotEditToolbar* tb, int percent) {
-    WindowTab* tab = tb->tab;
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!AnnotationIsLive(annot) || annot != tb->annot) {
-        return;
-    }
-    int opacity = ((percent * 255) + 50) / 100;
-    if (Opacity(annot) == opacity) {
-        return;
-    }
-    SetOpacity(annot, opacity);
-    AnnotChanged(tab);
-}
-
-static void ChipTextSizePicked(AnnotEditToolbar* tb, int size) {
-    WindowTab* tab = tb->tab;
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!AnnotationIsLive(annot) || annot != tb->annot) {
-        return;
-    }
-    if (DefaultAppearanceTextSize(annot) == size) {
-        return;
-    }
-    SetDefaultAppearanceTextSize(annot, size);
-    AnnotChanged(tab);
 }
 
 static void SliderValuePicked(AnnotEditToolbar* tb, int value) {

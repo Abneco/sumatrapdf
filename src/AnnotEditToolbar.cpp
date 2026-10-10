@@ -85,10 +85,7 @@ static void PostedStartContentsEdit(MainWindow*);
 static void PostedDeleteSelectedAnnotation(MainWindow*);
 static bool FreeTextInPlaceEditJustEnded();
 
-struct AnnotEditToolbar {
-    MainWindow* win = nullptr;
-    WindowTab* tab = nullptr;
-    Annotation* annot = nullptr;
+struct AnnotEditToolbar : AnnotEditToolbarBase {
     VirtHost* host = nullptr;
     PlatformFont* font = nullptr;
     Size size;
@@ -979,53 +976,11 @@ static void ChipColorPicked(AnnotEditToolbar* tb, Color col) {
     AnnotChanged(tab);
 }
 
-// how wide the stroke of an ink annotation is, from the Thickness slider of
-// its color drop-down
-static void ChipThicknessPicked(AnnotEditToolbar* tb, int width) {
-    WindowTab* tab = tb->tab;
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!AnnotationIsLive(annot) || annot != tb->annot) {
-        return;
-    }
-    if (BorderWidth(annot) == width) {
-        return;
-    }
-    SetBorderWidth(annot, width);
-    AnnotChanged(tab);
-}
-
 // ranges of the number sliders; widths and sizes are in PDF points
 constexpr int kBorderWidthMax = 12;
 constexpr int kFreeTextSizeMin = 6;
 constexpr int kFreeTextSizeMax = 72;
 constexpr int kOpacityPercentMin = 10;
-
-static void ChipOpacityPicked(AnnotEditToolbar* tb, int percent) {
-    WindowTab* tab = tb->tab;
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!AnnotationIsLive(annot) || annot != tb->annot) {
-        return;
-    }
-    int opacity = ((percent * 255) + 50) / 100;
-    if (Opacity(annot) == opacity) {
-        return;
-    }
-    SetOpacity(annot, opacity);
-    AnnotChanged(tab);
-}
-
-static void ChipTextSizePicked(AnnotEditToolbar* tb, int size) {
-    WindowTab* tab = tb->tab;
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!AnnotationIsLive(annot) || annot != tb->annot) {
-        return;
-    }
-    if (DefaultAppearanceTextSize(annot) == size) {
-        return;
-    }
-    SetDefaultAppearanceTextSize(annot, size);
-    AnnotChanged(tab);
-}
 
 static void OnChipClick(AnnotEditChip* chip, VirtMouseEvent*) {
     if (!chip || !chip->tb) {
@@ -1078,24 +1033,24 @@ static void OnChipClick(AnnotEditChip* chip, VirtMouseEvent*) {
                 minThickness = 0;
             }
             ShowAnnotColorPopup(tb->win, chipScreen, current, withNone, label, MkFunc1(ChipColorPicked, tb), thickness,
-                                MkFunc1(ChipThicknessPicked, tb), thicknessLabel, minThickness);
+                                MkFunc1(ChipThicknessPicked, (AnnotEditToolbarBase*)tb), thicknessLabel, minThickness);
             break;
         }
         case AnnotEditKind::Opacity: {
             // in percent, as the chip shows it; fully transparent would lose the annotation
             int percent = ((chip->item.number * 100) + 127) / 255;
             ShowAnnotSliderPopup(tb->win, chipScreen, Tr("Opacity"), percent, kOpacityPercentMin, 100,
-                                 MkFunc1(ChipOpacityPicked, tb));
+                                 MkFunc1(ChipOpacityPicked, (AnnotEditToolbarBase*)tb));
             break;
         }
         case AnnotEditKind::Border: {
             ShowAnnotSliderPopup(tb->win, chipScreen, Tr("Border Width"), std::max(BorderWidth(annot), 0), 0,
-                                 kBorderWidthMax, MkFunc1(ChipThicknessPicked, tb));
+                                 kBorderWidthMax, MkFunc1(ChipThicknessPicked, (AnnotEditToolbarBase*)tb));
             break;
         }
         case AnnotEditKind::TextSize: {
             ShowAnnotSliderPopup(tb->win, chipScreen, Tr("Text Size"), chip->item.number, kFreeTextSizeMin,
-                                 kFreeTextSizeMax, MkFunc1(ChipTextSizePicked, tb));
+                                 kFreeTextSizeMax, MkFunc1(ChipTextSizePicked, (AnnotEditToolbarBase*)tb));
             break;
         }
         case AnnotEditKind::FontName:
@@ -1265,24 +1220,6 @@ static void LayoutToolbar(AnnotEditToolbar* tb, const Vec<AnnotEditItem>& items)
     }
     auto* content = new Padding(box, Insets{margin, margin, margin, margin});
     tb->size = tb->host->SetLayoutSizedToContent(content);
-}
-
-// tb->annot is non-owning. Save/reload frees the wrapper and only
-// tab->selectedAnnotation is cleared in that path, so compare that first
-// and never call AnnotationIsLive on tb->annot alone.
-static Annotation* LiveToolbarAnnot(AnnotEditToolbar* tb) {
-    if (!tb || !tb->win) {
-        return nullptr;
-    }
-    WindowTab* tab = tb->win->CurrentTab();
-    Annotation* annot = tab ? tab->selectedAnnotation : nullptr;
-    if (!annot || annot != tb->annot || tab != tb->tab) {
-        return nullptr;
-    }
-    if (!AnnotationIsLive(annot)) {
-        return nullptr;
-    }
-    return annot;
 }
 
 static bool GetAnnotScreenBounds(MainWindow* win, Annotation* annot, Rect& out) {
