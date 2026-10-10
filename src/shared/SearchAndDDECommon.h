@@ -59,3 +59,28 @@ void HighlightRestoredFindTerm(MainWindow* win);
 void CancelPendingFind(MainWindow* win);
 void AbortCount(MainWindow* win);
 bool JoinFindThread(MainWindow* win, bool hideMessage);
+
+// references a [firstPos, firstPos + len) slice of gFindMatchPaintCache.positions
+struct FindMatchPaintRects {
+    u64 key = 0;
+    int firstPos = 0;
+    int len = 0;
+};
+
+struct FindMatchPaintCache {
+    int firstPage = 0;
+    int lastPage = 0;
+    int countEpoch = 0;
+    // all page rects for all entries, laid out contiguously; each entry
+    // references its rects as a [firstPos, firstPos + len) slice. Both entries
+    // and positions are plain POD so they can live in a Vec by value; entries
+    // hold indices (not pointers), so they stay valid as positions reallocates.
+    Vec<FindMatchPaintPageRect> positions;
+    Vec<FindMatchPaintRects> entries;
+};
+
+extern FindMatchPaintCache gFindMatchPaintCache;
+void RebuildFindMatchPaintCache(MainWindow* win, DisplayModel* dm, int firstPage, int lastPage);
+
+// implemented by each app
+bool HandleExecuteCmds(HWND hwnd, Str cmd);

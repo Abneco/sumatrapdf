@@ -1072,3 +1072,66 @@ void StartSearchFromCommandLine(MainWindow* win, Str text) {
     }
     FindTextOnThread(win, TextSearch::Direction::Forward, text, true, true);
 }
+
+FindMatchPaintCache gFindMatchPaintCache;
+
+static void FreeFindMatchPaintCacheEntries() {
+    VecReset(gFindMatchPaintCache.entries);
+    VecReset(gFindMatchPaintCache.positions);
+}
+
+void InvalidateFindMatchPaintCache() {
+    FreeFindMatchPaintCacheEntries();
+    gFindMatchPaintCache.firstPage = 0;
+    gFindMatchPaintCache.lastPage = 0;
+    gFindMatchPaintCache.countEpoch = 0;
+}
+
+void RebuildFindMatchPaintCache(MainWindow* win, DisplayModel* dm, int firstPage, int lastPage) {
+    FreeFindMatchPaintCacheEntries();
+    gFindMatchPaintCache.firstPage = firstPage;
+    gFindMatchPaintCache.lastPage = lastPage;
+    gFindMatchPaintCache.countEpoch = win->findCountEpoch;
+
+    EngineBase* engine = dm->GetEngine();
+    if (!engine) {
+        return;
+    }
+    Vec<FindMatchPaintPageRect>& positions = gFindMatchPaintCache.positions;
+    for (int i = 0; i < len(win->findMatches); i++) {
+        const FindMatch& fm = win->findMatches[i];
+        if (!FindMatchTouchesVisiblePages(fm, firstPage, lastPage)) {
+            continue;
+        }
+        int firstPos = len(positions);
+        AppendMatchPageRects(engine, fm, positions);
+        int n = positions.len - firstPos;
+        if (n == 0) {
+            continue;
+        }
+        FindMatchPaintRects entry;
+        entry.key = MatchKey(fm.startPage, fm.startGlyph);
+        entry.firstPos = firstPos;
+        entry.len = n;
+        VecAppend(gFindMatchPaintCache.entries, entry);
+    }
+}
+
+#if OS_WIN
+#include "base/Win.h"
+
+LRESULT OnDDExecute(HWND hwnd, WPARAM wp, LPARAM lp) {
+    HWND hwndClient = (HWND)wp;
+    HGLOBAL hCommand = (HGLOBAL)lp;
+    bool isUnicode = IsWindowUnicode(hwndClient);
+
+    TempStr cmd = HGLOBALToStrTemp(hCommand, isUnicode);
+    bool didHandle = HandleExecuteCmds(hwnd, cmd);
+    DDEACK ack{};
+    ack.fAck = didHandle ? 1 : 0;
+    LPARAM lpres = PackDDElParam(WM_DDE_ACK, *(WORD*)&ack, (UINT_PTR)hCommand);
+    PostMessageW(hwndClient, WM_DDE_ACK, (WPARAM)hwnd, lpres);
+    return 0;
+}
+
+#endif // OS_WIN

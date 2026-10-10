@@ -83,37 +83,6 @@ void RememberFindQuery(Str q) {
 // stands out with the color the user finds most noticeable (issue #5740).
 constexpr Color kFindOtherMatchColor = MkRgb(0xff, 0x96, 0x32);
 
-// references a [firstPos, firstPos + len) slice of gFindMatchPaintCache.positions
-struct FindMatchPaintRects {
-    u64 key = 0;
-    int firstPos = 0;
-    int len = 0;
-};
-
-static struct {
-    int firstPage = 0;
-    int lastPage = 0;
-    LONG countEpoch = 0;
-    // all page rects for all entries, laid out contiguously; each entry
-    // references its rects as a [firstPos, firstPos + len) slice. Both entries
-    // and positions are plain POD so they can live in a Vec by value; entries
-    // hold indices (not pointers), so they stay valid as positions reallocates.
-    Vec<FindMatchPaintPageRect> positions;
-    Vec<FindMatchPaintRects> entries;
-} gFindMatchPaintCache;
-
-static void FreeFindMatchPaintCacheEntries() {
-    VecReset(gFindMatchPaintCache.entries);
-    VecReset(gFindMatchPaintCache.positions);
-}
-
-void InvalidateFindMatchPaintCache() {
-    FreeFindMatchPaintCacheEntries();
-    gFindMatchPaintCache.firstPage = 0;
-    gFindMatchPaintCache.lastPage = 0;
-    gFindMatchPaintCache.countEpoch = 0;
-}
-
 static Kind kNotifFindProgress = "findProgress";
 
 // update the find bar's "n / m" status (and the results list selection) from
@@ -1232,36 +1201,6 @@ void FindTextOnThread(MainWindow* win, TextSearch::Direction direction, bool sho
     FindTextOnThread(win, direction, s, wasModified, showProgress);
 }
 
-static void RebuildFindMatchPaintCache(MainWindow* win, DisplayModel* dm, int firstPage, int lastPage) {
-    FreeFindMatchPaintCacheEntries();
-    gFindMatchPaintCache.firstPage = firstPage;
-    gFindMatchPaintCache.lastPage = lastPage;
-    gFindMatchPaintCache.countEpoch = win->findCountEpoch;
-
-    EngineBase* engine = dm->GetEngine();
-    if (!engine) {
-        return;
-    }
-    Vec<FindMatchPaintPageRect>& positions = gFindMatchPaintCache.positions;
-    for (int i = 0; i < len(win->findMatches); i++) {
-        const FindMatch& fm = win->findMatches[i];
-        if (!FindMatchTouchesVisiblePages(fm, firstPage, lastPage)) {
-            continue;
-        }
-        int firstPos = len(positions);
-        AppendMatchPageRects(engine, fm, positions);
-        int n = positions.len - firstPos;
-        if (n == 0) {
-            continue;
-        }
-        FindMatchPaintRects entry;
-        entry.key = MatchKey(fm.startPage, fm.startGlyph);
-        entry.firstPos = firstPos;
-        entry.len = n;
-        VecAppend(gFindMatchPaintCache.entries, entry);
-    }
-}
-
 static void PaintCurrentFindMatch(MainWindow* win, DisplayModel* dm, TextSearch* ts, Gfx* gfx) {
     if (!ts || len(ts->result) == 0) {
         return;
@@ -2085,7 +2024,7 @@ static Str HandleCmdCommand(HWND hwnd, Str cmd, bool* ack) {
 }
 
 // returns true if did handle a message
-static bool HandleExecuteCmds(HWND hwnd, Str cmd) {
+bool HandleExecuteCmds(HWND hwnd, Str cmd) {
     gMostRecentlyOpenedDoc = nullptr;
 
     bool didHandle = false;
@@ -2217,20 +2156,6 @@ LRESULT OnDDERequest(HWND hwnd, WPARAM wp, LPARAM lp) {
         GlobalFree(h);
         FreeDDElParam(WM_DDE_DATA, lpres);
     }
-    return 0;
-}
-
-LRESULT OnDDExecute(HWND hwnd, WPARAM wp, LPARAM lp) {
-    HWND hwndClient = (HWND)wp;
-    HGLOBAL hCommand = (HGLOBAL)lp;
-    bool isUnicode = IsWindowUnicode(hwndClient);
-
-    TempStr cmd = HGLOBALToStrTemp(hCommand, isUnicode);
-    bool didHandle = HandleExecuteCmds(hwnd, cmd);
-    DDEACK ack{};
-    ack.fAck = didHandle ? 1 : 0;
-    LPARAM lpres = PackDDElParam(WM_DDE_ACK, *(WORD*)&ack, (UINT_PTR)hCommand);
-    PostMessageW(hwndClient, WM_DDE_ACK, (WPARAM)hwnd, lpres);
     return 0;
 }
 
