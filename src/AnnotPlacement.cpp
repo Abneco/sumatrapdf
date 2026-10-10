@@ -38,6 +38,7 @@
 
 #include "AnnotPlacement.h"
 #include "AnnotPlacementCommon.h"
+#include "AnnotPlacementCursors.h"
 
 // MuPDF's default stamp is {12,12,12+190,12+50}; caret is {12,12,12+18,12+15}
 // with the caret mark at the middle of the left edge; file attachment is
@@ -95,17 +96,7 @@ SizeF FreeTextPlacementPageSize(const AnnotCreateArgs& args) {
     return {dx, dy};
 }
 
-static HCURSOR gCursorTextAnnotationPlacement = nullptr;
-static int gCursorTextAnnotationPlacementDx = 0;
-static int gCursorTextAnnotationPlacementDy = 0;
-static Color gCursorTextAnnotationPlacementColor = 0;
-
-static HCURSOR gCursorInkAnnotationPlacement = nullptr;
-static int gCursorInkAnnotationPlacementDx = 0;
-static int gCursorInkAnnotationPlacementDy = 0;
-static Color gCursorInkAnnotationPlacementColor = 0;
-
-static HCURSOR CreateSvgPlacementCursor(const char* icon, int dx, int dy, Color color, DWORD hotspotX, DWORD hotspotY) {
+HCURSOR CreateSvgPlacementCursor(const char* icon, int dx, int dy, Color color, DWORD hotspotX, DWORD hotspotY) {
     Pixmap* px = GetCachedPixmapForSvg(Str(icon), dx, dy, color);
     if (!px || !px->hbmp) {
         return nullptr;
@@ -128,70 +119,6 @@ static HCURSOR CreateSvgPlacementCursor(const char* icon, int dx, int dy, Color 
     HCURSOR cursor = (HCURSOR)CreateIconIndirect(&ii);
     DeleteObject(hbmpMask);
     return cursor;
-}
-
-static HCURSOR GetTextAnnotationPlacementCursor() {
-    int dx = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CXCURSOR));
-    int dy = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CYCURSOR));
-    Color color = ThemeWindowTextColor();
-    if (gCursorTextAnnotationPlacement && dx == gCursorTextAnnotationPlacementDx &&
-        dy == gCursorTextAnnotationPlacementDy && color == gCursorTextAnnotationPlacementColor) {
-        return gCursorTextAnnotationPlacement;
-    }
-    HCURSOR cursor = CreateSvgPlacementCursor(gIconAnnotText, dx, dy, color, 0, 0);
-    if (!cursor) {
-        return gCursorTextAnnotationPlacement;
-    }
-    if (gCursorTextAnnotationPlacement) {
-        DestroyCursor(gCursorTextAnnotationPlacement);
-    }
-    gCursorTextAnnotationPlacement = cursor;
-    gCursorTextAnnotationPlacementDx = dx;
-    gCursorTextAnnotationPlacementDy = dy;
-    gCursorTextAnnotationPlacementColor = color;
-    return gCursorTextAnnotationPlacement;
-}
-
-static HCURSOR GetInkAnnotationPlacementCursor() {
-    int dx = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CXCURSOR));
-    int dy = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CYCURSOR));
-    Color color = ThemeWindowTextColor();
-    if (gCursorInkAnnotationPlacement && dx == gCursorInkAnnotationPlacementDx &&
-        dy == gCursorInkAnnotationPlacementDy && color == gCursorInkAnnotationPlacementColor) {
-        return gCursorInkAnnotationPlacement;
-    }
-    DWORD hotspotX = (DWORD)((4 * dx) / 24);
-    DWORD hotspotY = (DWORD)((20 * dy) / 24);
-    HCURSOR cursor = CreateSvgPlacementCursor(gIconEditAnnotations, dx, dy, color, hotspotX, hotspotY);
-    if (!cursor) {
-        return gCursorInkAnnotationPlacement;
-    }
-    if (gCursorInkAnnotationPlacement) {
-        DestroyCursor(gCursorInkAnnotationPlacement);
-    }
-    gCursorInkAnnotationPlacement = cursor;
-    gCursorInkAnnotationPlacementDx = dx;
-    gCursorInkAnnotationPlacementDy = dy;
-    gCursorInkAnnotationPlacementColor = color;
-    return cursor;
-}
-
-void DeleteAnnotationPlacementCursors() {
-    if (gCursorTextAnnotationPlacement) {
-        DestroyCursor(gCursorTextAnnotationPlacement);
-    }
-    gCursorTextAnnotationPlacement = nullptr;
-    gCursorTextAnnotationPlacementDx = 0;
-    gCursorTextAnnotationPlacementDy = 0;
-    gCursorTextAnnotationPlacementColor = 0;
-
-    if (gCursorInkAnnotationPlacement) {
-        DestroyCursor(gCursorInkAnnotationPlacement);
-    }
-    gCursorInkAnnotationPlacement = nullptr;
-    gCursorInkAnnotationPlacementDx = 0;
-    gCursorInkAnnotationPlacementDy = 0;
-    gCursorInkAnnotationPlacementColor = 0;
 }
 
 static void SetTextAnnotationPlacementCursor() {

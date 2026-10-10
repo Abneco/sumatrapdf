@@ -35,6 +35,7 @@
 #include "resource.h"
 #include "gui/NativeCursors.h"
 #include "LaserPointerCursor.h"
+#include "AnnotPlacementCursors.h"
 
 #include "SumatraLog.h"
 
@@ -85,16 +86,6 @@ static fz_pixmap* RenderSvgToFzPixmap(fz_context* ctx, Str svgData, int dx, int 
     return pixmap;
 }
 
-static HCURSOR gCursorTextAnnotationPlacement = nullptr;
-static int gCursorTextAnnotationPlacementDx = 0;
-static int gCursorTextAnnotationPlacementDy = 0;
-static Color gCursorTextAnnotationPlacementColor = 0;
-
-static HCURSOR gCursorInkAnnotationPlacement = nullptr;
-static int gCursorInkAnnotationPlacementDx = 0;
-static int gCursorInkAnnotationPlacementDy = 0;
-static Color gCursorInkAnnotationPlacementColor = 0;
-
 // ng: orig takes the icon's pixels from its SVG pixmap cache
 // (GetCachedPixmapForSvg); the port has no such cache because gpui draws the
 // icons itself, so the icon is rendered here: BGRA, alpha-premultiplied,
@@ -140,7 +131,7 @@ static HBITMAP RenderSvgToBitmap(const char* icon, int dx, int dy, Color color) 
     return hbmp;
 }
 
-static HCURSOR CreateSvgPlacementCursor(const char* icon, int dx, int dy, Color color, DWORD hotspotX, DWORD hotspotY) {
+HCURSOR CreateSvgPlacementCursor(const char* icon, int dx, int dy, Color color, DWORD hotspotX, DWORD hotspotY) {
     HBITMAP hbmpColor = RenderSvgToBitmap(icon, dx, dy, color);
     if (!hbmpColor) {
         return nullptr;
@@ -165,70 +156,6 @@ static HCURSOR CreateSvgPlacementCursor(const char* icon, int dx, int dy, Color 
     DeleteObject(hbmpMask);
     DeleteObject(hbmpColor);
     return cursor;
-}
-
-static HCURSOR GetTextAnnotationPlacementCursor() {
-    int dx = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CXCURSOR));
-    int dy = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CYCURSOR));
-    Color color = ThemeWindowTextColor();
-    if (gCursorTextAnnotationPlacement && dx == gCursorTextAnnotationPlacementDx &&
-        dy == gCursorTextAnnotationPlacementDy && color == gCursorTextAnnotationPlacementColor) {
-        return gCursorTextAnnotationPlacement;
-    }
-    HCURSOR cursor = CreateSvgPlacementCursor(gIconAnnotText, dx, dy, color, 0, 0);
-    if (!cursor) {
-        return gCursorTextAnnotationPlacement;
-    }
-    if (gCursorTextAnnotationPlacement) {
-        DestroyCursor(gCursorTextAnnotationPlacement);
-    }
-    gCursorTextAnnotationPlacement = cursor;
-    gCursorTextAnnotationPlacementDx = dx;
-    gCursorTextAnnotationPlacementDy = dy;
-    gCursorTextAnnotationPlacementColor = color;
-    return gCursorTextAnnotationPlacement;
-}
-
-static HCURSOR GetInkAnnotationPlacementCursor() {
-    int dx = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CXCURSOR));
-    int dy = std::max(ToolbarIconSize(), DpiGetSystemMetrics(SM_CYCURSOR));
-    Color color = ThemeWindowTextColor();
-    if (gCursorInkAnnotationPlacement && dx == gCursorInkAnnotationPlacementDx &&
-        dy == gCursorInkAnnotationPlacementDy && color == gCursorInkAnnotationPlacementColor) {
-        return gCursorInkAnnotationPlacement;
-    }
-    DWORD hotspotX = (DWORD)((4 * dx) / 24);
-    DWORD hotspotY = (DWORD)((20 * dy) / 24);
-    HCURSOR cursor = CreateSvgPlacementCursor(gIconEditAnnotations, dx, dy, color, hotspotX, hotspotY);
-    if (!cursor) {
-        return gCursorInkAnnotationPlacement;
-    }
-    if (gCursorInkAnnotationPlacement) {
-        DestroyCursor(gCursorInkAnnotationPlacement);
-    }
-    gCursorInkAnnotationPlacement = cursor;
-    gCursorInkAnnotationPlacementDx = dx;
-    gCursorInkAnnotationPlacementDy = dy;
-    gCursorInkAnnotationPlacementColor = color;
-    return cursor;
-}
-
-void DeleteAnnotationPlacementCursors() {
-    if (gCursorTextAnnotationPlacement) {
-        DestroyCursor(gCursorTextAnnotationPlacement);
-    }
-    gCursorTextAnnotationPlacement = nullptr;
-    gCursorTextAnnotationPlacementDx = 0;
-    gCursorTextAnnotationPlacementDy = 0;
-    gCursorTextAnnotationPlacementColor = 0;
-
-    if (gCursorInkAnnotationPlacement) {
-        DestroyCursor(gCursorInkAnnotationPlacement);
-    }
-    gCursorInkAnnotationPlacement = nullptr;
-    gCursorInkAnnotationPlacementDx = 0;
-    gCursorInkAnnotationPlacementDy = 0;
-    gCursorInkAnnotationPlacementColor = 0;
 }
 
 // orig's gCursorDrag: the hand of dragcursor.cur, a resource of the exe

@@ -1106,6 +1106,9 @@
     <ClCompile Include="..\src\shared\AnnotPlacementCommon.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\shared\AnnotPlacementCursors_win.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\shared\AnnotSearch.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>

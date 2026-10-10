@@ -303,6 +303,7 @@ function sumatrapdf_files()
     "PageThumbnails.*",
     "MergePdf.*",
     "AnnotPlacement.*",
+    "AnnotPlacementCursors_win.*",
     "AnnotPlacementCommon.*",
     "AnnotTextPopup.*",
     "AnnotEditToolbar.*",
