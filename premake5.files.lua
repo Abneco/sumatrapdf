@@ -373,6 +373,7 @@ function sumatrapdf_files()
     "MainWindowCommon.*",
     "Menu.*",
     "MenuCommon.*",
+    "MenuDefs.*",
     "NavFilesInFolder.*",
     "NavFilesInFolderCommon.*",
     "Notifications.*",

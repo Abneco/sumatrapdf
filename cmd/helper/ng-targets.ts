@@ -1365,6 +1365,7 @@ export const targets: Target[] = [
       "src/ng/SessionState.cpp",
       "src/ng/Menu.cpp",
       "src/ng/MenuCommon.cpp",
+      "src/ng/MenuDefs.cpp",
       "src/ng/TipMarkup.cpp",
       "src/ng/Notifications.cpp",
       "src/ng/NotificationsCommon.cpp",

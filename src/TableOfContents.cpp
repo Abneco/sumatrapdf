@@ -39,6 +39,7 @@
 #include "SidebarPanel.h"
 #include "TableOfContents.h"
 #include "TableOfContentsCommon.h"
+#include "MenuDefs.h"
 
 // set tooltip for this item but only if the text isn't fully shown
 // TODO: I might have lost something in translation
@@ -408,8 +409,6 @@ void UpdateTocExpansionState(Vec<int>& tocState, TreeView* treeView, TocTree* do
     UpdateDocTocExpansionStateRecur(treeView, tocState, tocItem);
 }
 
-// clang-format off
-
 static void SaveAttachment(WindowTab* tab, Str fileName, int attachmentNo) {
     EngineBase* engine = tab->AsFixed()->GetEngine();
     Str data = EngineMupdfLoadAttachment(engine, attachmentNo);
@@ -439,7 +438,7 @@ static void OpenEmbeddedFile(WindowTab* tab, IPageDestination* dest) {
         return;
     }
     MainWindow* win = tab->win;
-    PageDestinationFile *destFile = (PageDestinationFile*)dest;
+    PageDestinationFile* destFile = (PageDestinationFile*)dest;
     Str path = destFile->path;
     Str tabPath = tab->filePath;
     if (!str::StartsWith(path, tabPath)) {
@@ -539,72 +538,6 @@ static void TocCollapseSameLevel(TreeView* tv, TreeItem ti) {
     }
     tv->ResumeRedraw();
 }
-
-// clang-format off
-static MenuDef menuDefContextToc[] = {
-    {
-        TrN("Expand All"),
-        CmdExpandAll,
-    },
-    {
-        TrN("Collapse All"),
-        CmdCollapseAll,
-    },
-    {
-        TrN("Expand to Level 1"),
-        CmdTocExpandToLevel1,
-    },
-    {
-        TrN("Expand to Level 2"),
-        CmdTocExpandToLevel2,
-    },
-    {
-        TrN("Expand to Level 3"),
-        CmdTocExpandToLevel3,
-    },
-    {
-        TrN("Collapse Same Level"),
-        CmdTocCollapseSameLevel,
-    },
-    {
-        TrN("Expand to Current Page"),
-        CmdExpandToCurrentPage,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Open Embedded PDF"),
-        CmdOpenEmbeddedPDF,
-    },
-    {
-        TrN("Save Embedded File..."),
-        CmdSaveEmbeddedFile,
-    },
-    {
-        TrN("Open Attachment"),
-        CmdOpenAttachment,
-    },
-    {
-        TrN("Save Attachment..."),
-        CmdSaveAttachment,
-    },
-    // note: strings cannot be "" or else items are not there
-    {
-        StrL("Add to favorites"),
-        CmdFavoriteAdd,
-    },
-    {
-        StrL("Remove from favorites"),
-        CmdFavoriteDel,
-    },
-    {
-        {},
-        0,
-    },
-};
-// clang-format on
 
 static void TocContextMenu(ContextMenuEvent* ev) {
     MainWindow* win = FindMainWindowByHwnd(ev->w->hwnd);

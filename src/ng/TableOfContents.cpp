@@ -39,6 +39,7 @@
 #include "gui/Sidebar.h"
 #include "TableOfContents.h"
 #include "TableOfContentsCommon.h"
+#include "MenuDefs.h"
 
 #include "SumatraLog.h"
 
@@ -338,8 +339,6 @@ void UpdateTocExpansionState(Vec<int>& tocState, MainWindow* win, TocTree* docTr
     UpdateDocTocExpansionStateRecur(tocState, docTree->root->child);
 }
 
-// clang-format on
-
 // --- expand / collapse commands ---------------------------------------------
 
 static void SetExpanded(TocItem* item, bool expanded) {
@@ -428,72 +427,6 @@ void TocCollapseSameLevel(MainWindow* win, TocItem* ti) {
 }
 
 // --- context menu -----------------------------------------------------------
-
-// clang-format off
-static MenuDef menuDefContextToc[] = {
-    {
-        TrN("Expand All"),
-        CmdExpandAll,
-    },
-    {
-        TrN("Collapse All"),
-        CmdCollapseAll,
-    },
-    {
-        TrN("Expand to Level 1"),
-        CmdTocExpandToLevel1,
-    },
-    {
-        TrN("Expand to Level 2"),
-        CmdTocExpandToLevel2,
-    },
-    {
-        TrN("Expand to Level 3"),
-        CmdTocExpandToLevel3,
-    },
-    {
-        TrN("Collapse Same Level"),
-        CmdTocCollapseSameLevel,
-    },
-    {
-        TrN("Expand to Current Page"),
-        CmdExpandToCurrentPage,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Open Embedded PDF"),
-        CmdOpenEmbeddedPDF,
-    },
-    {
-        TrN("Save Embedded File..."),
-        CmdSaveEmbeddedFile,
-    },
-    {
-        TrN("Open Attachment"),
-        CmdOpenAttachment,
-    },
-    {
-        TrN("Save Attachment..."),
-        CmdSaveAttachment,
-    },
-    // note: strings cannot be "" or else items are not there
-    {
-        StrL("Add to favorites"),
-        CmdFavoriteAdd,
-    },
-    {
-        StrL("Remove from favorites"),
-        CmdFavoriteDel,
-    },
-    {
-        {},
-        0,
-    },
-};
-// clang-format on
 
 // ng: orig builds an HMENU and tracks it; the pane builds a gpui PopupMenu from
 // this model.

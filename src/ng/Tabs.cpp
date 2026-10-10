@@ -49,6 +49,7 @@
 #include "AIChatCommon.h"
 #include "AIChatPanel.h"
 #include "Tabs.h"
+#include "MenuDefs.h"
 
 #include "SumatraLog.h"
 
@@ -486,89 +487,6 @@ void TabsMoveTab(MainWindow* win, int from, int to) {
 }
 
 // --- the tab context menu ---------------------------------------------------
-
-// clang-format off
-static MenuDef menuDefContextTab[] = {
-    // these top items are removed unless the document has unsaved changes;
-    // text matches the "Unsaved changes" close dialog
-    {
-        TrN("&Save changes to existing PDF"),
-        CmdSaveAnnotations,
-    },
-    {
-        TrN("Save changes to &new PDF"),
-        CmdSaveAnnotationsNewFile,
-    },
-    {
-        TrN("&Discard changes"),
-        CmdDiscardChanges,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Properties..."),
-        CmdProperties,
-    },
-    {
-        TrN("Show in folder"),
-        CmdShowInFolder,
-    },
-    {
-        TrN("Copy File Path"),
-        CmdCopyFilePath,
-    },
-    {
-        TrN("Open In New Window"),
-        CmdDuplicateInNewWindow,
-    },
-    {
-        TrN("Change Tab Color"),
-        CmdSetTabColor,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Close"),
-        CmdClose,
-    },
-    {
-        TrN("Close Other Tabs"),
-        CmdCloseOtherTabs,
-    },
-    {
-        TrN("Close Tabs To The Right"),
-        CmdCloseTabsToTheRight,
-    },
-    {
-        TrN("Close Tabs To The Left"),
-        CmdCloseTabsToTheLeft,
-    },
-    {
-        TrN("Close All Tabs"),
-        CmdCloseAllTabs,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Save Tab Group"),
-        CmdTabGroupSave,
-    },
-    {
-        TrN("Restore Tab Group"),
-        CmdTabGroupRestore,
-    },
-    {
-        {},
-        0,
-    },
-};
-// clang-format on
 
 MenuModel* BuildTabContextMenu(MainWindow* win, WindowTab* tabUnderMouse) {
     if (!win || !tabUnderMouse || tabUnderMouse->IsAboutTab()) {

@@ -37,6 +37,7 @@
 #include "gui/AppShell.h"
 #include "gui/Sidebar.h"
 #include "Favorites.h"
+#include "MenuDefs.h"
 
 // Note: those might be too big
 constexpr int kMaxFavSubmenus = 10;
@@ -391,27 +392,6 @@ void RememberFavTreeExpansionState(MainWindow* win) {
         }
     }
 }
-
-// clang-format off
-static MenuDef menuDefContextFav[] = {
-    {
-        TrN("Sort By Name"),
-        CmdToggleFavoritesSort,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Remove from favorites"),
-        CmdFavoriteDel,
-    },
-    {
-        {},
-        0,
-    },
-};
-// clang-format on
 
 MenuModel* BuildFavContextMenu(MainWindow*, FavTreeItem* fti) {
     MenuModel* popup = BuildMenuFromDef(menuDefContextFav, nullptr);

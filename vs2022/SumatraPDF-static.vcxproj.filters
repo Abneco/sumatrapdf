@@ -459,6 +459,9 @@
     <ClInclude Include="..\src\shared\MenuCommon.h">
       <Filter>src\shared</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\MenuDefs.h">
+      <Filter>src\shared</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\shared\MobiDoc.h">
       <Filter>src\shared</Filter>
     </ClInclude>
@@ -1296,6 +1299,9 @@
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\MenuCommon.cpp">
+      <Filter>src\shared</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\shared\MenuDefs.cpp">
       <Filter>src\shared</Filter>
     </ClCompile>
     <ClCompile Include="..\src\shared\MobiDoc.cpp">

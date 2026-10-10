@@ -35,6 +35,7 @@
 #include "PagePosition.h"
 #include "SidebarPanel.h"
 #include "Favorites.h"
+#include "MenuDefs.h"
 
 // Note: those might be too big
 constexpr int kMaxFavSubmenus = 10;
@@ -681,27 +682,6 @@ static void FavTreeKeyDown(TreeView::KeyDownEvent* ev) {
     // reuse the toc tree handler for Tab/focus handling
     TocTreeKeyDown2(ev);
 }
-
-// clang-format off
-static MenuDef menuDefContextFav[] = {
-    {
-        TrN("Sort By Name"),
-        CmdToggleFavoritesSort,
-    },
-    {
-        StrL(kMenuSeparator),
-        0,
-    },
-    {
-        TrN("Remove from favorites"),
-        CmdFavoriteDel,
-    },
-    {
-        {},
-        0,
-    },
-};
-// clang-format on
 
 static void FavTreeContextMenu(ContextMenuEvent* ev) {
     MainWindow* win = FindMainWindowByHwnd(ev->w->hwnd);
