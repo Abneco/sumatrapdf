@@ -177,3 +177,5 @@ void SendMyselfDDE(Str cmdA, HWND targetHwnd);
 bool IsSimpleOpenCase(const Flags& i, bool isFirstWin);
 void OpenUsingDDE(HWND targetHwnd, Str path, Flags& i, bool isFirstWin);
 bool SetupPluginMode(Flags& i);
+
+void OnFrameKeyB(MainWindow* win, bool isShift);

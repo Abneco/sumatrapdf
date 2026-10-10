@@ -2483,3 +2483,35 @@ bool SetupPluginMode(Flags& i) {
 }
 
 #endif // OS_WIN
+
+void OnFrameKeyB(MainWindow* win, bool isShift) {
+    auto* ctrl = win->ctrl;
+    bool isSinglePage = IsSingle(ctrl->GetDisplayMode());
+
+    DisplayModel* dm = win->AsFixed();
+    if (dm && !isSinglePage) {
+        bool forward = !isShift;
+        int currPage = ctrl->CurrentPageNo();
+        bool isVisible = dm->FirstBookPageVisible();
+        if (forward) {
+            isVisible = dm->LastBookPageVisible();
+        }
+        if (isVisible) {
+            return;
+        }
+
+        DisplayMode newMode = DisplayMode::BookView;
+        if (IsBookView(ctrl->GetDisplayMode())) {
+            newMode = DisplayMode::Facing;
+        }
+        SwitchToDisplayMode(win, newMode, true);
+
+        if (forward && currPage >= ctrl->CurrentPageNo() && (currPage > 1 || newMode == DisplayMode::BookView)) {
+            ctrl->GoToNextPage();
+        } else if (!forward && currPage <= ctrl->CurrentPageNo()) {
+            win->ctrl->GoToPrevPage();
+        }
+    } else if (win->presentation) {
+        win->ChangePresentationMode(PM_BLACK_SCREEN);
+    }
+}

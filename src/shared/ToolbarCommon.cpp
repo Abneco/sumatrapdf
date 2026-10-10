@@ -639,3 +639,86 @@ bool IsCmdAvailable(MainWindow* win, int cmdId, AppCommandCtx* ctx) {
     ctx->isDocLoaded = savedLoaded;
     return !remove;
 }
+
+bool IsCmdEnabled(MainWindow* win, int cmdId, AppCommandCtx* ctx) {
+    switch (cmdId) {
+        case CmdNextTab:
+        case CmdPrevTab:
+        case CmdNextTabSmart:
+        case CmdPrevTabSmart:
+            return SettingsUseTabs();
+        case PageInfoId:
+            return true;
+    }
+
+    bool remove, disable;
+    GetCommandIdState(ctx, cmdId, &remove, &disable);
+    if (remove || disable) {
+        return false;
+    }
+    switch (cmdId) {
+        case CmdOpenFile:
+        case CmdOpenFileNoHistory:
+            if (!CanAccessDisk()) {
+                return false;
+            }
+            break;
+        case CmdPrint:
+            if (!HasPermission(Perm::PrinterAccess)) {
+                return false;
+            }
+            break;
+    }
+
+    // if no file is open, only enable buttons for commands that don't require a document
+    // (custom toolbar buttons use a custom command id, the original command decides)
+    // https://github.com/sumatrapdfreader/sumatrapdf/issues/5657
+    if (!win->IsDocLoaded()) {
+        return CmdWorksWithoutDocument(OriginalCommandId(cmdId));
+    }
+
+    switch (cmdId) {
+        case CmdOpenFile:
+        case CmdOpenFileNoHistory:
+            // opening different files isn't allowed in plugin mode
+            return !gPluginMode;
+
+#ifndef DISABLE_DOCUMENT_RESTRICTIONS
+        case CmdPrint:
+            return !win->AsFixed() || win->AsFixed()->GetEngine()->AllowsPrinting();
+#endif
+
+        case CmdFindFirst:
+            return NeedsFindUI(win) || IsBrowserDocController(win->ctrl);
+
+        case CmdFindNext:
+        case CmdFindPrev: {
+            // Need non-empty find text (findEdit is the active bar or floating window edit).
+            if (FindEditTextLen(win) == 0) {
+                return false;
+            }
+            // When we already know there are zero matches, disable next/prev.
+            // Unknown count (scan pending / not started) still allows searching.
+            if (win->ctrl && win->ctrl->CanFindInPage()) {
+                return win->browserFindTotal != 0;
+            }
+            if (win->findCountValid && len(win->findCountPositions) == 0) {
+                return false;
+            }
+            return true;
+        }
+
+        case CmdGoToNextPage:
+            return win->ctrl->CurrentPageNo() < win->ctrl->PageCount();
+        case CmdGoToPrevPage:
+            return win->ctrl->CurrentPageNo() > 1;
+
+        case CmdNavigateBack:
+            return win->ctrl->CanNavigate(-1);
+        case CmdNavigateForward:
+            return win->ctrl->CanNavigate(1);
+
+        default:
+            return true;
+    }
+}

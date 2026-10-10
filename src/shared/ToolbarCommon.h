@@ -64,3 +64,5 @@ extern ToolbarButtonInfo gPdfAnnotationButtons[];
 extern const int kPdfAnnotationButtonsCount;
 
 bool IsCmdAvailable(MainWindow* win, int cmdId, AppCommandCtx* ctx);
+
+bool IsCmdEnabled(MainWindow* win, int cmdId, AppCommandCtx* ctx);

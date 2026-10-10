@@ -8357,45 +8357,6 @@ static void OnFrameKeyEsc(MainWindow* win) {
     }
 }
 
-static void OnFrameKeyB(MainWindow* win) {
-    auto* ctrl = win->ctrl;
-    bool isSinglePage = IsSingle(ctrl->GetDisplayMode());
-
-    DisplayModel* dm = win->AsFixed();
-    if (dm && !isSinglePage) {
-        bool forward = !IsShiftPressed();
-        int currPage = ctrl->CurrentPageNo();
-        bool isVisible = dm->FirstBookPageVisible();
-        if (forward) {
-            isVisible = dm->LastBookPageVisible();
-        }
-        if (isVisible) {
-            return;
-        }
-
-        DisplayMode newMode = DisplayMode::BookView;
-        if (IsBookView(ctrl->GetDisplayMode())) {
-            newMode = DisplayMode::Facing;
-        }
-        SwitchToDisplayMode(win, newMode, true);
-
-        if (forward && currPage >= ctrl->CurrentPageNo() && (currPage > 1 || newMode == DisplayMode::BookView)) {
-            ctrl->GoToNextPage();
-        } else if (!forward && currPage <= ctrl->CurrentPageNo()) {
-            win->ctrl->GoToPrevPage();
-        }
-    } else if (false && !isSinglePage) {
-        // "e-book view": flip a single page
-        bool forward = !IsShiftPressed();
-        int nextPage = ctrl->CurrentPageNo() + (forward ? 1 : -1);
-        if (ctrl->ValidPageNo(nextPage)) {
-            ctrl->GoToPage(nextPage, false);
-        }
-    } else if (win->presentation) {
-        win->ChangePresentationMode(PM_BLACK_SCREEN);
-    }
-}
-
 void ToggleCursorPositionInDoc(MainWindow* win) {
     // "cursor position" tip: make figuring out the current
     // cursor position in cm/in/pt possible (for exact layouting)
@@ -8500,7 +8461,7 @@ static void FrameOnChar(MainWindow* win, WPARAM key, LPARAM info = 0) {
             gIsDivideKeyDown = false;
             break;
         case 'b':
-            OnFrameKeyB(win);
+            OnFrameKeyB(win, IsShiftPressed());
             break;
     }
 }
