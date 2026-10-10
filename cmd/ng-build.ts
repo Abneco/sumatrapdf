@@ -44,6 +44,7 @@ Options:
   -wasm             build for the browser with emscripten (any host)
   -clang            Windows: clang-cl instead of cl.exe
   -asan             address sanitizer
+  -static           Linux: link libstdc++ and libgcc statically
   -profile          Windows, cl.exe: orig's Profile build (PerfLog, /callcap);
                     run with -start-perf-log -log-perf-file <path>
   -clean            delete the output directory first
@@ -92,6 +93,7 @@ function parseArgs(args: string[]): Options {
     else if (a === "-mac") plat = "mac";
     else if (a === "-clang") flags.clang = true;
     else if (a === "-asan") flags.asan = true;
+    else if (a === "-static") flags.staticRuntime = true;
     else if (a === "-profile") flags.profile = true;
     else if (a === "-clean") flags.clean = true;
     else if (a === "-rev") {

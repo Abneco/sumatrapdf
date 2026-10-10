@@ -27,6 +27,8 @@ export type BuildFlags = {
   verbose: boolean;
   /** n-th further build of the day: the .n of version yy.mm.dd.n */
   rev?: number;
+  /** Linux: link libstdc++ and libgcc into the executable */
+  staticRuntime?: boolean;
 };
 
 export type Fail = (msg: string) => never;
@@ -71,6 +73,15 @@ function withShared(t: Target, dir: string): Target {
 
 // ─── output layout ────────────────────────────────────────────────────────
 
+// Names the Linux output dir (out/<name>/<cfg>) so a second distro building
+// the same checkout doesn't mix its objects with out/linux.
+export const linuxOutEnv = "NG_LINUX_OUT";
+
+function platDirName(plat: Platform): string {
+  if (plat !== "linux") return plat;
+  return process.env[linuxOutEnv] || plat;
+}
+
 export function outDirName(plat: Platform, f: BuildFlags): string {
   let name = f.debug ? "dbg" : "rel";
   // mac is clang either way, so -clang only names a separate output dir where
@@ -78,7 +89,7 @@ export function outDirName(plat: Platform, f: BuildFlags): string {
   if (f.clang && plat !== "mac") name += "-clang";
   if (f.asan) name += "-asan";
   if (f.profile) name += "-profile";
-  return `${plat}/${name}`;
+  return `${platDirName(plat)}/${name}`;
 }
 
 export function outDir(plat: Platform, f: BuildFlags): string {
@@ -909,6 +920,7 @@ function linkCmd(
     } else {
       if (t.systemDeps !== "archive") ld.push(...linuxDeps().libs);
       ld.push("-lm", "-lpthread");
+      if (f.staticRuntime) ld.push("-static-libstdc++", "-static-libgcc");
     }
     if (f.asan) ld.push("-fsanitize=address");
     // GNU ld scans each archive once, in order, so a symbol an earlier lib

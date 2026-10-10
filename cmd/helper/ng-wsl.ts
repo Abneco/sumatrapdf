@@ -11,11 +11,11 @@ const bunHint = [
   "The build also needs: sudo apt install build-essential pkg-config libx11-dev libcairo2-dev libpango1.0-dev libgdk-pixbuf-2.0-dev libglib2.0-dev libssl-dev",
 ].join("\\n");
 
-function shellQuote(s: string): string {
+export function shellQuote(s: string): string {
   return `'${s.replaceAll("'", `'\\''`)}'`;
 }
 
-function toWslPath(winPath: string): string {
+export function toWslPath(winPath: string): string {
   const m = /^([A-Za-z]):[\\/](.*)$/.exec(winPath);
   if (!m) return winPath.replaceAll("\\", "/");
   return `/mnt/${m[1]!.toLowerCase()}/${m[2]!.replaceAll("\\", "/")}`;
