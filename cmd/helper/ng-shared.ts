@@ -146,6 +146,8 @@ export const sharedFiles = [
   "src/shared/MenuCommon.h",
   "src/shared/NavFilesInFolderCommon.cpp",
   "src/shared/NavFilesInFolderCommon.h",
+  "src/shared/NotificationsCommon.cpp",
+  "src/shared/NotificationsCommon.h",
   "src/shared/OleDragDropCommon.h",
   "src/shared/OleDragDropCommon_win.cpp",
   "src/shared/OpenFileFilters.h",

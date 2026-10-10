@@ -25,6 +25,7 @@
 
 #include "Theme.h"
 #include "Notifications.h"
+#include "NotificationsCommon.h"
 
 static StrNode* gDelayedNotifications = nullptr;
 
@@ -471,17 +472,6 @@ HWND NotificationWnd::Create(const NotificationCreateArgs& args) {
         }
     }
     return hwnd;
-}
-
-// returns 0% - 100%
-int CalcPerc(int current, int total) {
-    ReportIf(total <= 0 || current < 0);
-    ReportIf(total < current);
-    if (total <= 0) {
-        total = 1;
-    }
-    int perc = limitValue(100 * current / total, 0, 100);
-    return perc;
 }
 
 void NotificationWnd::Layout(Str message) {
@@ -1014,62 +1004,4 @@ void ShowMaybeDelayedNotifications(HWND hwndParent) {
     }
     FreeStrNode(nullptr, gDelayedNotifications);
     gDelayedNotifications = nullptr;
-}
-
-// the window half of orig's ShowChapterLayoutProgress (DisplayModel.cpp)
-static void ShowChapterLayoutNotif(DisplayModel* dm, Str msg, bool finished) {
-    MainWindow* found = nullptr;
-    WindowTab* tab = nullptr;
-    for (MainWindow* win : gWindows) {
-        for (WindowTab* t : win->Tabs()) {
-            if (t->AsFixed() == dm) {
-                found = win;
-                tab = t;
-                break;
-            }
-        }
-        if (found) {
-            break;
-        }
-    }
-    if (!found) {
-        return;
-    }
-    int timeout = finished ? kNotif5SecsTimeOut : kNotifNoTimeout;
-    NotificationWnd* wnd = GetNotificationForGroup(found, kNotifChapterLayout);
-    if (wnd) {
-        NotificationUpdateMessage(wnd, msg, timeout);
-        return;
-    }
-    NotificationCreateArgs args;
-    args.win = found;
-    args.groupId = kNotifChapterLayout;
-    args.timeoutMs = timeout;
-    args.corner = NotifCorner::BottomLeft;
-    args.msg = msg;
-    args.plainText = true;
-    args.tab = tab;
-    ShowNotification(args);
-}
-
-// the window half of orig's NotifyMediaBoxRelayout (DisplayModel.cpp)
-static void ShowLazyLayoutNotif(DisplayModel* dm, Str msg) {
-    for (MainWindow* win : gWindows) {
-        if (win->AsFixed() != dm) {
-            continue;
-        }
-        NotificationCreateArgs args;
-        args.win = win;
-        args.groupId = kNotifLazyLayout;
-        args.timeoutMs = kNotif5SecsTimeOut;
-        args.corner = NotifCorner::BottomLeft;
-        args.msg = msg;
-        ShowNotification(args);
-        return;
-    }
-}
-
-void InstallLayoutNotifHooks() {
-    gShowChapterLayoutNotifFn = ShowChapterLayoutNotif;
-    gShowLazyLayoutNotifFn = ShowLazyLayoutNotif;
 }
