@@ -748,17 +748,6 @@ struct WinSwatchPaint {
 // the preview, the presets and the custom colors
 static WinSwatchPaint gWinSwatches[1 + kNumPresets + kMaxCustomColors];
 
-static u8 BlendChannel(u8 fg, u8 bg, u8 a) {
-    return (u8)(((int)fg * a + (int)bg * (255 - a)) / 255);
-}
-
-static Color BlendOver(Color col, Color bg, u8 a) {
-    u8 r, g, b, br, bg2, bb;
-    UnpackColor(col, r, g, b);
-    UnpackColor(bg, br, bg2, bb);
-    return MkRgb(BlendChannel(r, br, a), BlendChannel(g, bg2, a), BlendChannel(b, bb, a));
-}
-
 static void PaintWinChecker(gp::PaintCtx* ctx, gp::Bounds rc, Color light, Color dark) {
     constexpr int kCheckerSize = 8;
     for (int cy = 0; cy < (int)rc.h; cy += kCheckerSize) {

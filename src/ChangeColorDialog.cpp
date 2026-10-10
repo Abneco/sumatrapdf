@@ -170,17 +170,6 @@ static Pixmap* MakeHsvPixmap(int w, int h) {
     return px;
 }
 
-static u8 BlendChannel(u8 fg, u8 bg, u8 a) {
-    return (u8)((((int)fg * (int)a) + ((int)bg * (255 - (int)a))) / 255);
-}
-
-static Color BlendOver(Color col, Color bg, u8 a) {
-    u8 r, g, b, br, bg2, bb;
-    UnpackColor(col, r, g, b);
-    UnpackColor(bg, br, bg2, bb);
-    return MkRgb(BlendChannel(r, br, a), BlendChannel(g, bg2, a), BlendChannel(b, bb, a));
-}
-
 static void PaintCheckerboard(Gfx* gfx, Rect rc, Color light, Color dark) {
     constexpr int kCheckerSize = 8;
     for (int cy = 0; cy < rc.dy; cy += kCheckerSize) {

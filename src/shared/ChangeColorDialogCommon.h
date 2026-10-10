@@ -16,3 +16,5 @@ struct TabColorTarget {
 
 // implemented by each app
 void TabColorPicked(TabColorTarget* target, ChangeColorsArgs* args);
+
+Color BlendOver(Color col, Color bg, u8 a);

@@ -17,21 +17,11 @@
 #include "gui/AppShell.h"
 
 #include "GlobalHotkeys.h"
+#include "GlobalHotkeysCommon.h"
 
 #if OS_WIN
 
 #include "base/Win.h"
-
-struct GlobalHotkeyInfo {
-    int hotkeyId = 0;
-    int cmdId = 0;
-    Str key;
-    Str cmd;
-};
-
-static Vec<GlobalHotkeyInfo> gGlobalHotkeys;
-static HWND gGlobalHotkeysHwnd = nullptr;
-static Vec<HWND> gActiveFrameHwndMRU;
 
 constexpr int kGlobalHotkeyBaseId = 0x6000;
 
@@ -61,14 +51,6 @@ static UINT ShortcutToHotkeyMod(const KeyShortcut& sc) {
     return mod;
 }
 
-void GlobalHotkeysOnActivate(HWND hwnd) {
-    if (!hwnd) {
-        return;
-    }
-    VecRemove(gActiveFrameHwndMRU, hwnd);
-    VecInsertAt(gActiveFrameHwndMRU, 0, hwnd);
-}
-
 static MainWindow* GetTargetWindowForGlobalHotkey() {
     for (HWND hwnd : gActiveFrameHwndMRU) {
         MainWindow* win = AppShellWindowFromHwnd(hwnd);
@@ -82,10 +64,6 @@ static MainWindow* GetTargetWindowForGlobalHotkey() {
         }
     }
     return nullptr;
-}
-
-HWND GetGlobalHotkeysHwnd() {
-    return gGlobalHotkeysHwnd;
 }
 
 void RegisterGlobalHotkeys(HWND hwnd) {
@@ -138,19 +116,6 @@ void RegisterGlobalHotkeys(HWND hwnd) {
         GlobalHotkeyInfo info{hotkeyId, cmdId, sc->key, sc->cmd};
         VecAppend(gGlobalHotkeys, info);
         logf("RegisterGlobalHotkeys: '%s' -> %s (%d)\n", sc->key, sc->cmd, cmdId);
-    }
-}
-
-void UnregisterGlobalHotkeys(HWND hwnd) {
-    if (!hwnd) {
-        return;
-    }
-    for (const auto& hk : gGlobalHotkeys) {
-        UnregisterHotKey(hwnd, hk.hotkeyId);
-    }
-    VecReset(gGlobalHotkeys);
-    if (hwnd == gGlobalHotkeysHwnd) {
-        gGlobalHotkeysHwnd = nullptr;
     }
 }
 

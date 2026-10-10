@@ -1659,3 +1659,42 @@ StrVec* GetNextPrevFilesReady(Str path) {
     InsertSortedNatural(&gNextPrevDirCache, path);
     return &gNextPrevDirCache;
 }
+
+#if OS_WIN
+
+// {AA509086-5CA9-4C25-8F95-589D3C07B48A}
+static const GUID kClsidVirtualDesktopManager = {0xAA509086,
+                                                 0x5CA9,
+                                                 0x4C25,
+                                                 {0x8F, 0x95, 0x58, 0x9D, 0x3C, 0x07, 0xB4, 0x8A}};
+
+// {A5CD92FF-29BE-454C-8D04-D42879C3B837}
+static const GUID kIidVirtualDesktopManager = {0xA5CD92FF,
+                                               0x29BE,
+                                               0x454C,
+                                               {0x8D, 0x04, 0xD4, 0x28, 0x79, 0xC3, 0xB8, 0x37}};
+
+// returns nullptr on Windows without virtual desktops (e.g. Win7) or on failure.
+// COM is already initialized (AutoOleUninitialize in WinMain) by the time we call this.
+ISumatraVirtualDesktopManager* CreateVirtualDesktopManager() {
+    ISumatraVirtualDesktopManager* mgr = nullptr;
+    CoCreateInstance(kClsidVirtualDesktopManager, nullptr, CLSCTX_ALL, kIidVirtualDesktopManager, (void**)&mgr);
+    return mgr;
+}
+
+// true if hwnd is on the user's current virtual desktop. Defaults to true when
+// we can't tell (no manager on Win7, or the query fails), preserving the old
+// "reuse the first instance window" behavior.
+bool IsWindowOnCurrentDesktop(ISumatraVirtualDesktopManager* vdm, HWND hwnd) {
+    if (!vdm || !hwnd) {
+        return true;
+    }
+    BOOL onCurrent = FALSE;
+    HRESULT hr = vdm->IsWindowOnCurrentVirtualDesktop(hwnd, &onCurrent);
+    if (FAILED(hr)) {
+        return true;
+    }
+    return onCurrent != FALSE;
+}
+
+#endif // OS_WIN

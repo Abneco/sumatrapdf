@@ -2159,6 +2159,7 @@
     <ClCompile Include="..\src\shared\FileThumbnailsCommon.cpp" />
     <ClCompile Include="..\src\shared\FilterUtil.cpp" />
     <ClCompile Include="..\src\shared\Flags.cpp" />
+    <ClCompile Include="..\src\shared\GlobalHotkeysCommon_win.cpp" />
     <ClCompile Include="..\src\shared\GoogleLens.cpp" />
     <ClCompile Include="..\src\shared\GumboHtmlParser.cpp" />
     <ClCompile Include="..\src\shared\HangDetector.cpp" />
