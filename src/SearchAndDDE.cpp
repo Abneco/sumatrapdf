@@ -338,40 +338,6 @@ void FindToggleMatchWholeWord(MainWindow* win) {
     }
 }
 
-// goToPage: scroll to the match's page even when it's already shown (a new
-// search). Moving between matches never adds a nav point: the search's start
-// view is already in the history (MarkSearchStart), so Back returns there
-void ShowSearchResult(MainWindow* win, Vec<TextSel>* result, bool goToPage) {
-    ReportIf(0 == len(*result));
-    if (0 == len(*result)) {
-        return;
-    }
-
-    DisplayModel* dm = win->AsFixed();
-    if (goToPage || !dm->PageShown((*result)[0].pageNo) ||
-        (dm->GetZoomVirtual() == kZoomFitPage || dm->GetZoomVirtual() == kZoomFitContent)) {
-        // nor must dwelling on a match turn it into a history entry
-        bool suppress = dm->stableNavPoint.suppress;
-        dm->stableNavPoint.suppress = true;
-        win->ctrl->GoToPage((*result)[0].pageNo, false);
-        dm->stableNavPoint.suppress = suppress;
-    }
-
-    // Find never changes the text selection: all matches (including the active
-    // one) are highlighted independently by PaintAllFindMatches, so the user's
-    // selection highlight is separate and survives searching (issue #5737).
-    dm->ShowResultRectToScreen(result);
-    InvalidateFindMatchPaintCache();
-    ScheduleRepaint(win, 0);
-}
-
-void ClearSearchResult(MainWindow* win) {
-    // clear only the find-match highlights, never the user's text selection:
-    // find and selection highlights are tracked independently (issue #5737)
-    ClearFindMatches(win); // also invalidates the find-match paint cache
-    ScheduleRepaint(win, 0);
-}
-
 struct UpdateFindStatusData {
     MainWindow* win;
     int current;

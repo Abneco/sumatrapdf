@@ -564,3 +564,4 @@ bool IsMainWindowValidAndNotClosing(MainWindow*);
 bool IsWindowTabValid(WindowTab*);
 extern Vec<MainWindow*> gWindows;
 void CleanRemoteDestNameInPlace(Str& destName);
+void ScheduleRepaint(MainWindow*, int delay);

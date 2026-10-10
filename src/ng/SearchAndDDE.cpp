@@ -318,36 +318,6 @@ void FindToggleMatchWholeWord(MainWindow* win) {
     }
 }
 
-void ShowSearchResult(MainWindow* win, Vec<TextSel>* result, bool goToPage) {
-    ReportIf(0 == len(*result));
-    if (0 == len(*result)) {
-        return;
-    }
-
-    DisplayModel* dm = win->AsFixed();
-    if (goToPage || !dm->PageShown((*result)[0].pageNo) ||
-        (dm->GetZoomVirtual() == kZoomFitPage || dm->GetZoomVirtual() == kZoomFitContent)) {
-        bool suppress = dm->stableNavPoint.suppress;
-        dm->stableNavPoint.suppress = true;
-        win->ctrl->GoToPage((*result)[0].pageNo, false);
-        dm->stableNavPoint.suppress = suppress;
-    }
-
-    // Find never changes the text selection: all matches (including the active
-    // one) are highlighted independently by PaintAllFindMatches, so the user's
-    // selection highlight is separate and survives searching (issue #5737).
-    dm->ShowResultRectToScreen(result);
-    InvalidateFindMatchPaintCache();
-    AppShellInvalidate(win);
-}
-
-void ClearSearchResult(MainWindow* win) {
-    // clear only the find-match highlights, never the user's text selection:
-    // find and selection highlights are tracked independently (issue #5737)
-    ClearFindMatches(win); // also invalidates the find-match paint cache
-    AppShellInvalidate(win);
-}
-
 struct UpdateFindStatusData {
     MainWindow* win;
     int current;

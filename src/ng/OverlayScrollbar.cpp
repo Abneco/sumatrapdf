@@ -144,7 +144,7 @@ void OverlayScrollbarHide(OverlayScrollbar* sb) {
 // arms the timer on a state transition, so continuous scroll while already
 // SmartThin would otherwise let the earlier mouse-stop / first-reveal timer
 // fire and hide the bar mid-scroll.
-static void RestartSmartThinAutoHide(OverlayScrollbar* sb) {
+void RestartSmartThinAutoHide(OverlayScrollbar* sb) {
     if (sb->state != State::SmartThin) {
         return;
     }
@@ -207,26 +207,6 @@ void OverlayScrollbarSetInfo(OverlayScrollbar* sb, int nMin, int nMax, int nPage
     sb->nMax = nMax;
     sb->nPage = nPage;
     sb->nPos = nPos;
-}
-
-// Show the thin smart overlay after scroll activity (mouse wheel, keys, etc.).
-// Unlike mouse-move tracking, this does not require cursor motion (#5859).
-void OverlayScrollbarNotifyScroll(OverlayScrollbar* sb) {
-    if (!sb || !IsActive(sb) || sb->isDragging) {
-        return;
-    }
-    if (IsAlwaysThickMode(sb)) {
-        return;
-    }
-    // Leave thick-from-proximity alone; only (re)show the thin indicator.
-    if (IsThick(sb)) {
-        return;
-    }
-    if (sb->state != State::SmartThin) {
-        ShowScrollbarWindow(sb, false);
-    } else {
-        RestartSmartThinAutoHide(sb);
-    }
 }
 
 // orig's MouseTrackTimerProc, per bar: a 50 ms poll of the cursor. Here the

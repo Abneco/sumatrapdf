@@ -446,6 +446,11 @@ Size MainWindow::GetViewPortSize() const {
     return Size{canvasRc.dx, canvasRc.dy};
 }
 
+// orig's deferred canvas repaint: here every repaint is the next frame
+void ScheduleRepaint(MainWindow* win, int) {
+    AppShellInvalidate(win);
+}
+
 void MainWindow::RedrawCanvas() const {
     AppShellInvalidate(const_cast<MainWindow*>(this));
 }
