@@ -266,3 +266,42 @@ void ReadingAutoScrollReverse(MainWindow* win) {
     }
     BarUpdate(win, true);
 }
+
+void ReadingAutoScrollStart(MainWindow* win) {
+    WindowTab* tab = CurrentDocTab(win);
+    if (!tab || !ScrollModel(tab)) {
+        return;
+    }
+    StopMiddleClickScroll(win);
+    tab->autoScroll.on = true;
+    tab->autoScroll.paused = false;
+    tab->autoScroll.atEnd = AtScrollLimit(ScrollModel(tab), tab->autoScroll.dir);
+    tab->autoScroll.accum = 0;
+    if (!tab->autoScroll.atEnd) {
+        ArmReadingTimer(win, tab);
+    } else {
+        tab->autoScroll.paused = true;
+        KillReadingTimer(win);
+    }
+    BarSetSessionTab(win, tab);
+    logf("ReadingAutoScroll: start, speed %d px/s, atEnd %d\n", (int)CurrentSpeed(), (int)tab->autoScroll.atEnd);
+    BarUpdate(win, true);
+}
+
+void ReadingAutoScrollSyncToTab(WindowTab* tab) {
+    if (!tab || !tab->win) {
+        return;
+    }
+    MainWindow* win = tab->win;
+    if (tab->IsNonDocumentTab() || !tab->autoScroll.on || !ScrollModel(tab)) {
+        ReadingAutoScrollHideBar(win);
+        return;
+    }
+    if (!tab->autoScroll.paused && !tab->autoScroll.atEnd) {
+        ArmReadingTimer(win, tab);
+    } else {
+        KillReadingTimer(win);
+    }
+    BarSetSessionTab(win, tab);
+    BarUpdate(win, true);
+}

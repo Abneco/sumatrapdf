@@ -64,7 +64,7 @@ constexpr int kBarPadX = 12;
 constexpr int kBarPadY = 6;
 constexpr int kBtnGap = 8;
 
-static void StopMiddleClickScroll(MainWindow* win) {
+void StopMiddleClickScroll(MainWindow* win) {
     if (!win || win->mouseAction != MouseAction::Scrolling) {
         return;
     }
@@ -91,49 +91,12 @@ void KillReadingTimer(MainWindow*) {}
 
 static ReadingAutoScrollBar* BarEnsure(MainWindow* win);
 
-void ReadingAutoScrollStart(MainWindow* win) {
-    WindowTab* tab = CurrentDocTab(win);
-    if (!tab || !ScrollModel(tab)) {
-        return;
-    }
-    StopMiddleClickScroll(win);
-    tab->autoScroll.on = true;
-    tab->autoScroll.paused = false;
-    tab->autoScroll.atEnd = AtScrollLimit(ScrollModel(tab), tab->autoScroll.dir);
-    tab->autoScroll.accum = 0;
-    if (!tab->autoScroll.atEnd) {
-        ArmReadingTimer(win, tab);
-    } else {
-        tab->autoScroll.paused = true;
-        KillReadingTimer(win);
-    }
+// creates the bar if needed and ties it to the tab being scrolled
+void BarSetSessionTab(MainWindow* win, WindowTab* tab) {
     ReadingAutoScrollBar* bar = BarEnsure(win);
     if (bar) {
         bar->sessionTab = tab;
     }
-    logf("ReadingAutoScroll: start, speed %d px/s, atEnd %d\n", (int)CurrentSpeed(), (int)tab->autoScroll.atEnd);
-    BarUpdate(win, true);
-}
-
-void ReadingAutoScrollSyncToTab(WindowTab* tab) {
-    if (!tab || !tab->win) {
-        return;
-    }
-    MainWindow* win = tab->win;
-    if (tab->IsNonDocumentTab() || !tab->autoScroll.on || !ScrollModel(tab)) {
-        ReadingAutoScrollHideBar(win);
-        return;
-    }
-    if (!tab->autoScroll.paused && !tab->autoScroll.atEnd) {
-        ArmReadingTimer(win, tab);
-    } else {
-        KillReadingTimer(win);
-    }
-    ReadingAutoScrollBar* bar = BarEnsure(win);
-    if (bar) {
-        bar->sessionTab = tab;
-    }
-    BarUpdate(win, true);
 }
 
 bool ReadingAutoScrollOnKey(MainWindow* win, int key, bool ctrl, bool shift, bool alt) {
