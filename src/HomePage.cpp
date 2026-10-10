@@ -3618,3 +3618,6 @@ void HomePageOnMouseWheel(MainWindow* win, int delta) {
         HwndInvalidate(win->hwndCanvas);
     }
 }
+
+// ng drops its cached thumbnail texture here; orig loads thumbnails when it paints
+void HomePageThumbnailChanged(FileState*) {}

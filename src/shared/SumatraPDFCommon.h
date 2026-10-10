@@ -111,6 +111,8 @@ void ReloadTab(WindowTab* tab);
 void StartNextPrevDirScan(Str dir);
 void RemoveFailedFiles(StrVec& files);
 
+TempStr PeekNextFileInFolderTemp(MainWindow* win, int* outN = nullptr, int* outM = nullptr);
+
 #if OS_WIN
 // Minimal redeclaration of the shell's IVirtualDesktopManager (Windows 10 1607+),
 // to tell whether a window is on the user's current virtual desktop. We use a
@@ -142,3 +144,5 @@ struct CreateThumbnailFromFileData {
         DeleteFileEBookUI(fileEBookUI);
     }
 };
+
+TempStr PeekNextFileInFolderTemp(MainWindow* win, int* outN, int* outM);

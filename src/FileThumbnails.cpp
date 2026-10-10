@@ -21,30 +21,6 @@
 #include "FileThumbnails.h"
 #include "FileThumbnailsCommon.h"
 
-bool HasThumbnail(FileState* fs) {
-    if (!fs || len(fs->filePath) == 0) {
-        return false;
-    }
-    // Prefer the in-memory thumbnail; only hit disk when missing.
-    if (!fs->thumbnail && !LoadThumbnail(fs)) {
-        return false;
-    }
-
-    TempStr bmpPath = GetThumbnailPathTemp(fs->filePath);
-    if (len(bmpPath) == 0) {
-        return fs->thumbnail != nullptr;
-    }
-    FILETIME bmpTime = file::GetModificationTime(bmpPath);
-    FILETIME fileTime = file::GetModificationTime(fs->filePath);
-    // delete the thumbnail if the file is newer than the thumbnail
-    if (FileTimeDiffInSecs(fileTime, bmpTime) > 0) {
-        FreePixmap(fs->thumbnail);
-        fs->thumbnail = nullptr;
-    }
-
-    return fs->thumbnail != nullptr;
-}
-
 // takes ownership of bmp
 void SetThumbnail(FileState* fs, Pixmap* bmp) {
     ReportIf(bmp && PixmapIsEmpty(bmp));
@@ -111,22 +87,6 @@ void SaveThumbnail(FileState* fs) {
         logf("SaveThumbnail: Save('%s') failed with %d\n", thumbnailPath, (int)st);
         file::Delete(thumbnailPath);
     }
-}
-
-void RemoveThumbnail(FileState* fs) {
-    if (!fs || len(fs->filePath) == 0) {
-        return;
-    }
-    if (!HasThumbnail(fs)) {
-        return;
-    }
-
-    TempStr bmpPath = GetThumbnailPathTemp(fs->filePath);
-    if (bmpPath) {
-        file::Delete(bmpPath);
-    }
-    FreePixmap(fs->thumbnail);
-    fs->thumbnail = nullptr;
 }
 
 struct ChmThumbnailTask : HtmlWindowCallback {

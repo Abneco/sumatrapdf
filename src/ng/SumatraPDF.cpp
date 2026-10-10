@@ -2148,48 +2148,6 @@ static void ShowNoFileToOpenNotif(MainWindow* win, bool forward) {
     ShowNotification(nargs);
 }
 
-// next openable file after the current tab's path (no wrap), or empty if none.
-// outN/outM are 1-based index of the next file and total count when non-null.
-static TempStr PeekNextFileInFolderTemp(MainWindow* win, int* outN, int* outM) {
-    if (outN) {
-        *outN = 0;
-    }
-    if (outM) {
-        *outM = 0;
-    }
-    if (!win || win->IsCurrentTabAbout() || !CanAccessDisk() || gPluginMode) {
-        return {};
-    }
-    WindowTab* tab = win->CurrentTab();
-    if (!tab || len(tab->filePath) == 0) {
-        return {};
-    }
-    Str path = tab->filePath;
-    StrVec* files = GetNextPrevFilesReady(path);
-    if (!files) {
-        return {}; // listing still running; hint is shown when it finishes
-    }
-    int nFiles = len(*files);
-    if (nFiles < 2) {
-        return {};
-    }
-    int idx = files->Find(path);
-    if (idx < 0 || idx + 1 >= nFiles) {
-        return {}; // no wrap: already last
-    }
-    Str next = files->At(idx + 1);
-    if (!file::Exists(next)) {
-        return {};
-    }
-    if (outN) {
-        *outN = idx + 2; // 1-based index of the next file
-    }
-    if (outM) {
-        *outM = nFiles;
-    }
-    return str::DupTemp(next);
-}
-
 static void MaybeShowNextFileScrollHint(MainWindow* win) {
     if (!gSettings->showFileNavigateHint) {
         return;

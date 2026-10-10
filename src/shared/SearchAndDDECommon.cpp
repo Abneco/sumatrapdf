@@ -1169,3 +1169,26 @@ void ClearSearchResult(MainWindow* win) {
     ClearFindMatches(win); // also invalidates the find-match paint cache
     ScheduleRepaint(win, 0);
 }
+
+// update the n/m counter after a search settles on a match: instant from cache
+// when the term/match-case/document are unchanged, otherwise rebuild it
+void UpdateMatchCount(MainWindow* win, Str text) {
+    DisplayModel* dm = win->AsFixed();
+    void* engine = dm ? (void*)dm->GetEngine() : nullptr;
+    bool wantSnippets = gSettings->searchUIFloating && IsFindWindowVisible(win);
+    bool wantMatchList = true;
+    ApplyFindPageRange(win);
+    bool cacheHit = win->findCountValid && win->findCountText && str::Eq(win->findCountText, text) &&
+                    win->findCountMatchCase == win->findMatchCase &&
+                    win->findCountMatchWholeWord == win->findMatchWholeWord && win->findCountEngine == engine &&
+                    str::Eq(win->findCountRangeText, win->findPageRangeText) &&
+                    (!wantMatchList || (wantSnippets ? win->findCountHasSnippets : len(win->findMatches) > 0));
+    if (cacheHit) {
+        // Matches are unchanged, but Find Next/Prev may have moved the active
+        // document match while focus was outside the floating Find window.
+        ShowMatchCount(win);
+        FindWindowRefreshResults(win, false);
+    } else {
+        StartFindCount(win, text, win->findMatchCase, win->findMatchWholeWord);
+    }
+}

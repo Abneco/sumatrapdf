@@ -215,7 +215,7 @@ void FindFirst(MainWindow* win) {
 constexpr UINT kFindDebounceDelayMs = 500;
 constexpr UINT kFindDebounceShortDelayMs = 1000;
 
-static bool ApplyFindPageRange(MainWindow* win) {
+bool ApplyFindPageRange(MainWindow* win) {
     TempStr spec = win->findPagesEdit ? win->findPagesEdit->GetTextTemp() : TempStr{};
     bool changed = !str::Eq(spec, win->findPageRangeText);
     str::ReplaceWithCopy(&win->findPageRangeText, spec);
@@ -473,8 +473,6 @@ void ShowMatchCount(MainWindow* win) {
 // cap on how many per-match snippets we build for the floating results list
 // (matches beyond this still count toward "n / m", just aren't listed)
 constexpr int kMaxFindResults = 5000;
-
-static void StartFindCount(MainWindow* win, Str text, bool matchCase, bool matchWholeWord);
 
 // Drop find-match / match-count state that only applies to the previous document
 // (tab switch, close-current, reload). Keeps find box text (#5308). If the find
@@ -834,7 +832,7 @@ void AbortCount(MainWindow* win) {
 // scan is already running, remember only the latest request and let the running
 // worker start it when it finishes, so rapid typing never piles up scans and
 // the UI thread never blocks waiting on a scan.
-static void StartFindCount(MainWindow* win, Str text, bool matchCase, bool matchWholeWord) {
+void StartFindCount(MainWindow* win, Str text, bool matchCase, bool matchWholeWord) {
     DisplayModel* dm = win->AsFixed();
     if (!dm) {
         return;
@@ -879,29 +877,6 @@ static void StartFindCount(MainWindow* win, Str text, bool matchCase, bool match
     auto fn = MkFunc0<CountThreadData>(CountThread, d);
     win->findCountThread = StartThread(fn, StrL("FindCountThread"));
     d->thread = win->findCountThread;
-}
-
-// update the n/m counter after a search settles on a match: instant from cache
-// when the term/match-case/document are unchanged, otherwise rebuild it
-void UpdateMatchCount(MainWindow* win, Str text) {
-    DisplayModel* dm = win->AsFixed();
-    void* engine = dm ? (void*)dm->GetEngine() : nullptr;
-    bool wantSnippets = gSettings->searchUIFloating && IsFindWindowVisible(win);
-    bool wantMatchList = true;
-    ApplyFindPageRange(win);
-    bool cacheHit = win->findCountValid && win->findCountText && str::Eq(win->findCountText, text) &&
-                    win->findCountMatchCase == win->findMatchCase &&
-                    win->findCountMatchWholeWord == win->findMatchWholeWord && win->findCountEngine == engine &&
-                    str::Eq(win->findCountRangeText, win->findPageRangeText) &&
-                    (!wantMatchList || (wantSnippets ? win->findCountHasSnippets : len(win->findMatches) > 0));
-    if (cacheHit) {
-        // Matches are unchanged, but Find Next/Prev may have moved the active
-        // document match while focus was outside the floating Find window.
-        ShowMatchCount(win);
-        FindWindowRefreshResults(win, false);
-    } else {
-        StartFindCount(win, text, win->findMatchCase, win->findMatchWholeWord);
-    }
 }
 
 // progressCb on the document's TextSearch points at ftd. Drop it before ftd is
