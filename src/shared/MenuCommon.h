@@ -10,3 +10,13 @@ struct FileHistoryEntry {
 };
 void SetFileHistoryCmdIds(Vec<FileHistoryEntry>& files);
 TempStr CleanupURLForClipbardCopyTemp(Str s);
+
+// the fixed entries of the zoom menu
+struct ZoomMenuId {
+    int cmdId;
+    float zoom;
+};
+extern const ZoomMenuId gZoomMenuIds[];
+extern const int gZoomMenuIdsCount;
+int CmdIdFromVirtualZoom(float virtualZoom);
+float ZoomMenuItemToZoom(int menuItemId);

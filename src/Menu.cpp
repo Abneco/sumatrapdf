@@ -1807,36 +1807,6 @@ HMENU BuildMenuFromDef(MenuDef* menuDef, HMENU menu, BuildMenuCtx* ctx) {
     return menu;
 }
 
-// clang-format off
-static struct {
-    int cmdId;
-    float zoom;
-} gZoomMenuIds[] = {
-    { CmdZoom6400,        6400.0 },
-    { CmdZoom3200,        3200.0 },
-    { CmdZoom1600,        1600.0 },
-    { CmdZoom800,         800.0  },
-    { CmdZoom400,         400.0  },
-    { CmdZoom200,         200.0  },
-    { CmdZoom150,         150.0  },
-    { CmdZoom125,         125.0  },
-    { CmdZoom100,         100.0  },
-    { CmdZoom50,          50.0   },
-    { CmdZoom25,          25.0   },
-    { CmdZoom12_5,        12.5   },
-    { CmdZoom8_33,        8.33f  },
-    { CmdZoomCustom,      0      },
-    { CmdZoomFitPage,    kZoomFitPage    },
-    { CmdZoomFitWidth,   kZoomFitWidth   },
-    { CmdZoomFitHeight,  kZoomFitHeight  },
-    { CmdZoomFitByOrientation, kZoomFitByOrientation },
-    { CmdZoomFitContent, kZoomFitContent },
-    { CmdZoomFitVisible, kZoomFitVisible },
-    { CmdZoomShrinkToFit, kZoomShrinkToFit },
-    { CmdZoomActualSize, kZoomActualSize },
-};
-// clang-format on
-
 static void BuildMenuZoom(HMENU m) {
     auto* prefs = gSettings;
     auto* customZoomLevels = prefs->zoomLevels;
@@ -1858,15 +1828,6 @@ static void BuildMenuZoom(HMENU m) {
         WCHAR* ws = CWStrTemp(title);
         AppendMenuW(m, flags, cmdId, ws);
     }
-}
-
-int CmdIdFromVirtualZoom(float virtualZoom) {
-    for (auto&& it : gZoomMenuIds) {
-        if (virtualZoom == it.zoom) {
-            return it.cmdId;
-        }
-    }
-    return CmdZoomCustom;
 }
 
 // Custom ZoomLevels menu items use dynamically allocated command ids (not in
@@ -1891,18 +1852,9 @@ static int CustomZoomCmdIdFromLevel(float zoomVirtual) {
     return 0;
 }
 
-float ZoomMenuItemToZoom(int menuItemId) {
-    for (auto&& it : gZoomMenuIds) {
-        if (menuItemId == it.cmdId) {
-            return it.zoom;
-        }
-    }
-    ReportIf(true);
-    return 100.0;
-}
-
 static void ZoomMenuItemCheck(HMENU m, int cmdId, bool canZoom) {
-    for (auto&& it : gZoomMenuIds) {
+    for (int zi = 0; zi < gZoomMenuIdsCount; zi++) {
+        auto&& it = gZoomMenuIds[zi];
         MenuSetEnabled(m, it.cmdId, canZoom);
     }
 
@@ -1914,7 +1866,8 @@ static void ZoomMenuItemCheck(HMENU m, int cmdId, bool canZoom) {
     }
 
     // Uncheck all fixed zoom menu commands in the radio range
-    for (auto&& it : gZoomMenuIds) {
+    for (int zi = 0; zi < gZoomMenuIdsCount; zi++) {
+        auto&& it = gZoomMenuIds[zi];
         MenuSetChecked(m, it.cmdId, false);
     }
     // Uncheck all custom ZoomLevels commands (ids are not a contiguous radio range)

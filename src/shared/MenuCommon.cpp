@@ -108,3 +108,51 @@ MenuAccelText ParseMenuAccelTextTemp(Str s) {
     res.display = Str(buf, out);
     return res;
 }
+
+// clang-format off
+const ZoomMenuId gZoomMenuIds[] = {
+    { CmdZoom6400,        6400.0 },
+    { CmdZoom3200,        3200.0 },
+    { CmdZoom1600,        1600.0 },
+    { CmdZoom800,         800.0  },
+    { CmdZoom400,         400.0  },
+    { CmdZoom200,         200.0  },
+    { CmdZoom150,         150.0  },
+    { CmdZoom125,         125.0  },
+    { CmdZoom100,         100.0  },
+    { CmdZoom50,          50.0   },
+    { CmdZoom25,          25.0   },
+    { CmdZoom12_5,        12.5   },
+    { CmdZoom8_33,        8.33f  },
+    { CmdZoomCustom,      0      },
+    { CmdZoomFitPage,    kZoomFitPage    },
+    { CmdZoomFitWidth,   kZoomFitWidth   },
+    { CmdZoomFitHeight,  kZoomFitHeight  },
+    { CmdZoomFitByOrientation, kZoomFitByOrientation },
+    { CmdZoomFitContent, kZoomFitContent },
+    { CmdZoomFitVisible, kZoomFitVisible },
+    { CmdZoomShrinkToFit, kZoomShrinkToFit },
+    { CmdZoomActualSize, kZoomActualSize },
+};
+// clang-format on
+
+const int gZoomMenuIdsCount = dimofi(gZoomMenuIds);
+
+int CmdIdFromVirtualZoom(float virtualZoom) {
+    for (auto&& it : gZoomMenuIds) {
+        if (virtualZoom == it.zoom) {
+            return it.cmdId;
+        }
+    }
+    return CmdZoomCustom;
+}
+
+float ZoomMenuItemToZoom(int menuItemId) {
+    for (auto&& it : gZoomMenuIds) {
+        if (menuItemId == it.cmdId) {
+            return it.zoom;
+        }
+    }
+    ReportIf(true);
+    return 100.0;
+}
