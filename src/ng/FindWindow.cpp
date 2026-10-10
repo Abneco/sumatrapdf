@@ -48,6 +48,7 @@
 #include "SvgIcons.h"
 #include "FindBar.h"
 #include "FindWindow.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -64,15 +65,6 @@ constexpr int kFindWinMinDy = 140;
 constexpr int kFindWinPagesDx = 160;
 constexpr int kFindWinRowDy = 20;
 constexpr int kFindWinPageColDx = 40;
-
-static int DecimalDigits(int n) {
-    int digits = 1;
-    while (n >= 10) {
-        n /= 10;
-        digits++;
-    }
-    return digits;
-}
 
 // "n / m" slot, wide enough for the full count so the search box stays put
 static float FindStatusSlotDx(int totalHits, bool capped) {
@@ -135,18 +127,6 @@ static FindWindowWnd* Wnd(MainWindow* win) {
 }
 
 // --- results ----------------------------------------------------------------
-
-// list index of the match starting at (page, glyph), or -1 if there is none
-static int FindMatchIndex(MainWindow* win, int page, int glyph) {
-    int n = len(win->findMatches);
-    for (int i = 0; i < n; i++) {
-        const FindMatch& fm = win->findMatches[i];
-        if (fm.startPage == page && fm.startGlyph == glyph) {
-            return i;
-        }
-    }
-    return -1;
-}
 
 // list index of the match the document is currently on (so the selection can
 // track the current match), or -1 if it isn't in the list

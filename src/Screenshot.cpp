@@ -34,6 +34,7 @@
 #include "Translations.h"
 #include "GlobalHotkeys.h"
 #include "Screenshot.h"
+#include "AppHelpersCommon.h"
 
 static bool IsAppFrame(HWND hwnd) {
     for (MainWindow* win : gWindows) {
@@ -140,16 +141,6 @@ static TempStr SerializeHotkeyTemp(UINT vk, bool ctrl, bool shift, bool alt, boo
         return {};
     }
     return ToStrTemp(s);
-}
-
-// find existing Shortcut entry for CmdScreenshot, or nullptr
-static Shortcut* FindScreenshotShortcutEntry() {
-    for (Shortcut* sc : *gSettings->shortcuts) {
-        if (str::EqI(sc->cmd, StrL("CmdScreenshot"))) {
-            return sc;
-        }
-    }
-    return nullptr;
 }
 
 // WM_KEYDOWN doesn't fire for VK_SNAPSHOT (PrtSc) because Windows intercepts it.

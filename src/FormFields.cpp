@@ -24,6 +24,7 @@
 #include "Toolbar.h"
 #include "SumatraDialogs.h"
 #include "FormFields.h"
+#include "AppHelpersCommon.h"
 
 // One field is edited at a time: either a text edit box or a choice list box
 // floats over the page.
@@ -200,19 +201,6 @@ static HFONT MakeFieldFont(int fontPx) {
     // negative height => character height in pixels
     return CreateFontW(-fontPx, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
                        CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, L"Arial");
-}
-
-// the field's on-screen font height in pixels: the /DA font size (PDF points)
-// scaled to the page's current zoom, or a height-derived fallback for
-// auto-sized (/DA size 0) fields.
-static int FieldFontPx(Annotation* widget, Rect rc) {
-    float daSize = GetWidgetFontSize(widget);
-    float pageDy = widget->bounds.dy; // field height in page (PDF) units
-    if (daSize > 0 && pageDy > 0) {
-        float scale = (float)rc.dy / pageDy; // screen px per PDF unit
-        return std::max(8, (int)(daSize * scale));
-    }
-    return std::max(8, (int)((float)rc.dy * 0.7f));
 }
 
 static bool StartTextEdit(MainWindow* win, Annotation* widget, Rect rc, int flags) {

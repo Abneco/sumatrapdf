@@ -24,6 +24,7 @@
 #include "gui/ToolWindow.h"
 #include "Favorites.h"
 #include "SumatraDialogs.h"
+#include "AppHelpersCommon.h"
 
 struct AddFavoriteDlg {
     MainWindow* win = nullptr;
@@ -50,14 +51,6 @@ struct AddFavoriteView {
 };
 
 static gp::Entity<AddFavoriteView> gAddFavView;
-
-static TempStr FavoritePromptTemp(Str pageLabel) {
-    int chapter = 0, page = 0;
-    if (str::Parse(pageLabel, "%d/%d%$", &chapter, &page)) {
-        return fmt(Tr("Name for chapter %d page %d (optional):").s, chapter, page);
-    }
-    return fmt(Tr("Name for page %s (optional):").s, pageLabel);
-}
 
 // orig's modal window, where the platform can have one (DlgWindowOpen); null: a
 // dialog in the frame

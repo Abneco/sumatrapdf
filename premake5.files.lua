@@ -357,6 +357,7 @@ function sumatrapdf_files()
     "HangDetector.*",
     "HomePage.*",
     "HomePageCommon.*",
+    "AppHelpersCommon.*",
     "BrowserViewCommon.*",
     "Installer.*",
     "InstallerCommon.cpp",

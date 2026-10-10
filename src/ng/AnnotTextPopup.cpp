@@ -30,6 +30,7 @@
 #include "gui/AppShell.h"
 #include "gui/DocCanvas.h"
 #include "AnnotTextPopup.h"
+#include "AppHelpersCommon.h"
 
 constexpr int kMargin = 8;
 constexpr int kRuleGap = 4;
@@ -56,13 +57,6 @@ struct AnnotTextPopup {
         str::Free(text);
     }
 };
-
-bool AnnotationHasText(Annotation* annot) {
-    if (!AnnotationIsLive(annot)) {
-        return false;
-    }
-    return len(Contents(annot)) > 0;
-}
 
 static Color PopupBg() {
     return ThemeNotificationsBackgroundColor();

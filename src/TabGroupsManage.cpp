@@ -25,6 +25,7 @@
 #include "Theme.h"
 #include "DarkMode.h"
 #include "TabGroupsManage.h"
+#include "AppHelpersCommon.h"
 
 constexpr int kPadding = 8;
 
@@ -163,21 +164,6 @@ void TabGroupsWnd::OpenTabGroup() {
     // post WM_CLOSE instead of DestroyWindow so we return from the
     // listbox double-click callback before the dialog is torn down
     PostMessageW(hwnd, WM_CLOSE, 0, 0);
-}
-
-static void FreeTabGroup(TabGroup* group) {
-    if (!group) {
-        return;
-    }
-    str::Free(group->name);
-    if (group->tabFiles) {
-        for (auto* tf : *group->tabFiles) {
-            str::Free(tf->path);
-            free(tf);
-        }
-        delete group->tabFiles;
-    }
-    free(group);
 }
 
 void TabGroupsWnd::UpdateDeleteButton() {

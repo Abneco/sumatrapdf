@@ -38,6 +38,7 @@
 #include "SvgIcons.h"
 #include "FindBar.h"
 #include "FindWindow.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -559,15 +560,6 @@ void FindBarView::OnCmd(FindBarView* self, gp::Ctx* cx, const gp::ClickEvent*, i
             break;
     }
     gp::Notify(cx);
-}
-
-static int DecimalDigits(int n) {
-    int digits = 1;
-    while (n >= 10) {
-        n /= 10;
-        digits++;
-    }
-    return digits;
 }
 
 // width of the "n / m" status slot, wide enough for the largest count it will

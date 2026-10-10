@@ -35,6 +35,7 @@
 #include "Theme.h"
 #include "DarkMode.h"
 #include "FindBar.h"
+#include "AppHelpersCommon.h"
 
 // command ids for the bar's toolbar buttons; must not collide with real commands
 constexpr int kFindBarCloseCmdId = (int)CmdLast + 50;
@@ -103,15 +104,6 @@ void FindStatusBox::SetBounds(Rect r) {
 }
 
 } // namespace
-
-static int DecimalDigits(int n) {
-    int digits = 1;
-    while (n >= 10) {
-        n /= 10;
-        digits++;
-    }
-    return digits;
-}
 
 // width of the "n / m" status slot, wide enough for the largest count it will
 // show. Shared with the floating find window so both size it the same way.

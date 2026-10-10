@@ -45,6 +45,7 @@
 #include "gui/DialogWidgets.h"
 #include "gui/ToolWindow.h"
 #include "gui/NavFilesUI.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -684,17 +685,6 @@ static void GoUp() {
     // select the directory we're coming from
     TempStr cameFrom = str::DupTemp(gNav.currDir);
     Navigate(path::GetDirTemp(gNav.currDir), cameFrom);
-}
-
-// cameFrom when it is a direct child of dir (so Back / Forward select it), else empty
-static Str SelectIfChildOf(Str cameFrom, Str dir) {
-    if (len(cameFrom) == 0 || len(dir) == 0) {
-        return {};
-    }
-    if (!path::IsSame(path::GetDirTemp(cameFrom), dir)) {
-        return {};
-    }
-    return cameFrom;
 }
 
 static void GoBack() {

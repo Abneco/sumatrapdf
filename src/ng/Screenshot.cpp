@@ -44,6 +44,7 @@
 #include "Screenshot.h"
 #if OS_WIN
 #include "ScreenshotCapture.h"
+#include "AppHelpersCommon.h"
 #endif
 
 #include "SumatraLog.h"
@@ -278,16 +279,6 @@ static TempStr SerializeHotkeyTemp(uint vk, bool ctrl, bool shift, bool alt) {
         return {};
     }
     return ToStrTemp(s);
-}
-
-// find existing Shortcut entry for CmdScreenshot, or nullptr
-static Shortcut* FindScreenshotShortcutEntry() {
-    for (Shortcut* sc : *gSettings->shortcuts) {
-        if (str::EqI(sc->cmd, StrL("CmdScreenshot"))) {
-            return sc;
-        }
-    }
-    return nullptr;
 }
 
 // find custom shortcut key string for CmdScreenshot, or empty if none

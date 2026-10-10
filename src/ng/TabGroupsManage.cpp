@@ -33,6 +33,7 @@
 #include "gui/DialogWidgets.h"
 #include "gui/ToolWindow.h"
 #include "TabGroupsManage.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -276,21 +277,6 @@ static void OpenTabGroup(MainWindow* win) {
         }
         LoadDocument(targetWin, tf->path);
     }
-}
-
-static void FreeTabGroup(TabGroup* group) {
-    if (!group) {
-        return;
-    }
-    str::Free(group->name);
-    if (group->tabFiles) {
-        for (auto* tf : *group->tabFiles) {
-            str::Free(tf->path);
-            free(tf);
-        }
-        delete group->tabFiles;
-    }
-    free(group);
 }
 
 static void DeleteTabGroup() {

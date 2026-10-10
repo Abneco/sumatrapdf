@@ -36,6 +36,7 @@
 #include "gui/TabSwitcher.h"
 #include "gui/DialogWidgets.h"
 #include "gui/TabsUI.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -115,14 +116,6 @@ void TabsUIOnTabsChanged(MainWindow* win) {
 // orig: a pinned tab (the Home tab) is neither dragged nor a drop target
 static bool IsPinnedTab(WindowTab* tab) {
     return tab->IsAboutTab();
-}
-
-// the text stays readable on a tab that carries a color of its own
-static Color TabTextColorForBackground(Color text, Color tabBg) {
-    if (abs((int)GetLightness(text) - (int)GetLightness(tabBg)) >= 80) {
-        return text;
-    }
-    return IsLightColor(tabBg) ? kColBlack : kColWhite;
 }
 
 static Color TabBgColor(WindowTab* tab, bool isSelected, bool isUnderMouse) {

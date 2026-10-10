@@ -36,6 +36,7 @@
 #include "Theme.h"
 #include "DarkMode.h"
 #include "FindWindow.h"
+#include "AppHelpersCommon.h"
 
 // command ids for the window's toolbar buttons (handled in OnCommand)
 constexpr int kFindWinPinCmdId = (int)CmdLast + 51;
@@ -127,18 +128,6 @@ struct FindResultsModel : ListBoxModel {
     int ItemsCount() override { return len(win->findMatches); }
     Str Item(int i) override { return win->findMatches[i].snippet; }
 };
-
-// list index of the match starting at (page, glyph), or -1 if there is none
-static int FindMatchIndex(MainWindow* win, int page, int glyph) {
-    int n = len(win->findMatches);
-    for (int i = 0; i < n; i++) {
-        const FindMatch& fm = win->findMatches[i];
-        if (fm.startPage == page && fm.startGlyph == glyph) {
-            return i;
-        }
-    }
-    return -1;
-}
 
 struct FindWindowWnd : WindowBase {
     MainWindow* win = nullptr;

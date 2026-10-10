@@ -29,6 +29,7 @@
 #include "WindowTab.h"
 
 #include "AnnotTextPopup.h"
+#include "AppHelpersCommon.h"
 
 // A floating card with the annotation's whole text, opened by clicking the
 // annotation. The text sits in a read-only multi-line edit, which wraps,
@@ -83,13 +84,6 @@ struct AnnotTextPopup {
     bool closing = false;
     Func1List<MainWindow*> onWindowMoved;
 };
-
-bool AnnotationHasText(Annotation* annot) {
-    if (!AnnotationIsLive(annot)) {
-        return false;
-    }
-    return len(Contents(annot)) > 0;
-}
 
 static Color PopupBg() {
     return ThemeNotificationsBackgroundColor();

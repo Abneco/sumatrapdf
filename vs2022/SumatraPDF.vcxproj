@@ -1461,6 +1461,7 @@
     <ClInclude Include="..\src\shared\AnnotSearch.h" />
     <ClInclude Include="..\src\shared\AnnotTextPopup.h" />
     <ClInclude Include="..\src\shared\Annotation.h" />
+    <ClInclude Include="..\src\shared\AppHelpersCommon.h" />
     <ClInclude Include="..\src\shared\AppSettings.h" />
     <ClInclude Include="..\src\shared\AppTools.h" />
     <ClInclude Include="..\src\shared\AvifReader.h" />
@@ -2124,6 +2125,7 @@
     <ClCompile Include="..\src\shared\AnnotPlacementCommon.cpp" />
     <ClCompile Include="..\src\shared\AnnotSearch.cpp" />
     <ClCompile Include="..\src\shared\Annotation.cpp" />
+    <ClCompile Include="..\src\shared\AppHelpersCommon.cpp" />
     <ClCompile Include="..\src\shared\AppSettings.cpp" />
     <ClCompile Include="..\src\shared\AppTools.cpp" />
     <ClCompile Include="..\src\shared\AvifReader.cpp" />

@@ -36,6 +36,7 @@
 #include "FilterHighlightDraw.h"
 #include "NavFilesInFolder.h"
 #include "NavFilesInFolderCommon.h"
+#include "AppHelpersCommon.h"
 
 // A modeless directory browser listing sub-directories and files SumatraPDF
 // can open (judged by extension). Enter / double-click replaces the document
@@ -699,17 +700,6 @@ void NavFilesInFolderWnd::GoUp() {
     // select the directory we're coming from
     TempStr cameFrom = str::DupTemp(currDir);
     Navigate(path::GetDirTemp(currDir), cameFrom);
-}
-
-// cameFrom when it is a direct child of dir (so Back / Forward select it), else empty
-static Str SelectIfChildOf(Str cameFrom, Str dir) {
-    if (len(cameFrom) == 0 || len(dir) == 0) {
-        return {};
-    }
-    if (!path::IsSame(path::GetDirTemp(cameFrom), dir)) {
-        return {};
-    }
-    return cameFrom;
 }
 
 void NavFilesInFolderWnd::GoBack() {

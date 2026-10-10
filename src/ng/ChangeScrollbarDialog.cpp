@@ -21,6 +21,7 @@
 #include "gui/AppShell.h"
 #include "gui/DialogWidgets.h"
 #include "SumatraDialogs.h"
+#include "AppHelpersCommon.h"
 
 #include "SumatraLog.h"
 
@@ -45,20 +46,6 @@ struct ChangeScrollbarView {
 };
 
 static gp::Entity<ChangeScrollbarView> gChangeScrollbarView;
-
-// orig's ScrollbarModeDisplayName
-static Str ScrollbarModeDisplayName(int idx) {
-    if (idx == kScrollbarSmart) {
-        return Tr("Smart Overlay");
-    }
-    if (idx == kScrollbarOverlay) {
-        return Tr("Overlay");
-    }
-    if (idx == kScrollbarHidden) {
-        return Tr("Hidden");
-    }
-    return Tr("Windows");
-}
 
 // orig's modal window, where the platform can have one (DlgWindowOpen); null: a
 // dialog in the frame
