@@ -49,8 +49,6 @@ void ApplyFindHistory(DropDown* dd) {
     }
 }
 
-static Kind kNotifFindProgress = "findProgress";
-
 // update the find bar's "n / m" status (and the results list selection) from
 // the current in-page match and the all-pages sweep
 void BrowserFindUpdateStatus(MainWindow* win, DocController* md, int pageCur, int pageTotal) {
@@ -208,14 +206,49 @@ bool FindFlushPendingSearch(MainWindow* win) {
     return true;
 }
 
-struct UpdateFindStatusData {
-    MainWindow* win;
-    int current;
-    int total;
-    bool showProgress;
-};
+// orig: a find task owns its thread's handle, MainWindow keeps a copy to wait on
+void FindTaskCloseThread(ThreadHandle* h) {
+    SafeCloseThreadHandle(h);
+}
 
-static void UpdateFindStatus(UpdateFindStatusData* d) {
+void FindWinCloseThread(ThreadHandle* h) {
+    *h = nullptr;
+}
+
+void FindJoinThread(ThreadHandle* h) {
+    WaitForSingleObject(*h, INFINITE);
+    *h = nullptr;
+}
+
+// the find buttons are disabled while a find runs
+void FindSetToolbarBusy(MainWindow* win, bool busy) {
+    SetToolbarButtonEnableState(win, CmdFindPrev, !busy);
+    SetToolbarButtonEnableState(win, CmdFindNext, !busy);
+    SetToolbarButtonEnableState(win, CmdFindToggleMatchCase, !busy);
+    SetToolbarButtonEnableState(win, CmdFindToggleMatchWholeWord, !busy);
+}
+
+void FindWindowDocChanged(MainWindow* win) {
+    FindWindowUpdatePagesLabel(win);
+    FindWindowRefreshResults(win);
+}
+
+void FindResultsInstalled(MainWindow* win, bool gotSnippets) {
+    if (gotSnippets) {
+        FindWindowRefreshResults(win);
+    }
+}
+
+void FindCountShown(MainWindow* win) {
+    // Enable/disable Find Next/Prev once we know whether any matches exist.
+    ToolbarUpdateStateForWindow(win, false);
+    ScheduleRepaint(win, 0);
+}
+
+// the find controls repaint themselves
+void FindStatusChanged(MainWindow*) {}
+
+void UpdateFindStatus(UpdateFindStatusData* d) {
     AutoDelete delData(d);
 
     auto* win = d->win;
@@ -233,89 +266,6 @@ static void UpdateFindStatus(UpdateFindStatusData* d) {
     // no progress notification now -- the n/m counter is the only feedback.
 }
 
-struct FindThreadData {
-    MainWindow* win = nullptr;
-    TextSearch::Direction direction = TextSearch::Direction::Forward;
-    bool wasModified = false;
-    bool showProgress = false;
-    Str text;
-    ThreadHandle thread = nullptr;
-
-    FindThreadData(MainWindow* win, TextSearch::Direction direction, Str text, bool wasModified) {
-        this->win = win;
-        this->direction = direction;
-        this->text = str::Dup(text);
-        this->wasModified = wasModified;
-    }
-    ~FindThreadData() {
-        str::Free(text);
-        CloseHandle(thread);
-    }
-
-    void ShowUI(bool showProgress) {
-        // no "Searching n of m..." notification anymore: the find UI's own n/m
-        // counter (and the floating window's results list) is the feedback. We
-        // still remember showProgress to decide whether the incremental find may
-        // bail early (see UpdateFindStatus).
-        this->showProgress = showProgress;
-
-        SetToolbarButtonEnableState(win, CmdFindPrev, false);
-        SetToolbarButtonEnableState(win, CmdFindNext, false);
-        SetToolbarButtonEnableState(win, CmdFindToggleMatchCase, false);
-        SetToolbarButtonEnableState(win, CmdFindToggleMatchWholeWord, false);
-    }
-
-    void HideUI(bool success, bool loopedAround) const {
-        SetToolbarButtonEnableState(win, CmdFindPrev, true);
-        SetToolbarButtonEnableState(win, CmdFindNext, true);
-        SetToolbarButtonEnableState(win, CmdFindToggleMatchCase, true);
-        SetToolbarButtonEnableState(win, CmdFindToggleMatchWholeWord, true);
-
-        if (!success && !loopedAround) {
-            // i.e. canceled
-            FindBarSetStatus(win, StrL(""));
-        } else if (!success && loopedAround) {
-            // keep it compact and consistent with the "n / m" counter
-            FindBarSetStatus(win, StrL("0 / 0"), 0);
-        }
-        // else: a match was found; the "n / m" counter (set by UpdateMatchCount
-        // after this) is the only feedback - no beep on wrap-around
-    }
-
-    bool WasCanceled() {
-        bool winValid = IsMainWindowValidAndNotClosing(win);
-        auto res = !winValid || win->findCancelled;
-        if (res) {
-            logf("FindThreadData: WasCanceled() returns true, isMainWindowValid: %d, win->findCancelled: %d\n",
-                 (int)winValid, (int)win->findCancelled);
-        }
-        return res;
-    }
-
-    void UpdateProgress(int current, int total) {
-        auto* data = new UpdateFindStatusData;
-        data->win = this->win;
-        data->current = current;
-        data->total = total;
-        data->showProgress = this->showProgress;
-        auto fn = MkFunc0<UpdateFindStatusData>(UpdateFindStatus, data);
-        uitask::Post(fn, nullptr);
-    }
-};
-
-struct FindEndTaskData {
-    MainWindow* win = nullptr;
-    FindThreadData* ftd = nullptr;
-    Vec<TextSel>* textSel = nullptr;
-    bool wasModifiedCanceled = false;
-    bool loopedAround = false;
-    FindEndTaskData() = default;
-    ~FindEndTaskData() {
-        delete ftd;
-        ftd = nullptr;
-    }
-};
-
 // ---- find bar "n / m" match counter ----------------------------------------
 //
 // We show the position of the current match among all matches in the document.
@@ -323,536 +273,6 @@ struct FindEndTaskData {
 // thread and the per-match positions are cached: prev/next (which don't change
 // the term) recompute the index instantly from the cache, and a new scan only
 // runs when the search term or match-case option changes.
-
-// cap on how many per-match snippets we build for the floating results list
-// (matches beyond this still count toward "n / m", just aren't listed)
-constexpr int kMaxFindResults = 5000;
-
-// Drop find-match / match-count state that only applies to the previous document
-// (tab switch, close-current, reload). Keeps find box text (#5308). If the find
-// UI is still open, starts a new count so all-match highlights rebuild.
-void InvalidateFindForDocumentChange(MainWindow* win) {
-    if (!win) {
-        return;
-    }
-    // Page/glyph coords and the match-count cache are for the previous engine.
-    // Keep the find box text so the user can re-search after close/reload (#5308).
-    ClearFindMatches(win);
-    win->findCountValid = false;
-    win->findCountCapped = false;
-    win->findCountEngine = nullptr;
-    VecReset(win->findCountPositions);
-    str::FreePtr(&win->findCountText);
-    FindWindowUpdatePagesLabel(win);
-    FindWindowRefreshResults(win);
-
-    if (!IsFindUIVisible(win) || !win->findEdit) {
-        return;
-    }
-    TempStr s = win->findEdit->GetTextTemp();
-    if (len(s) == 0) {
-        FindBarSetStatus(win, StrL(""));
-        return;
-    }
-    if (win->AsFixed()) {
-        StartFindCount(win, s, win->findMatchCase, win->findMatchWholeWord);
-        return;
-    }
-    DocController* md = BrowserFindCtrl(win);
-    if (md) {
-        BrowserFindStartSearch(win, md);
-    }
-}
-
-struct CountThreadData {
-    MainWindow* win = nullptr;
-    EngineBase* engine = nullptr; // AddRef'd by the caller, released by the thread
-    Str text;
-    bool matchCase = false;
-    bool matchWholeWord = false;
-    bool wantMatchList = false; // build findMatches (for all-match painting or the results list)
-    bool wantSnippets = false;  // build per-match snippet strings for the results list
-    int startPage = 1;          // scan from here (the current page), wrapping around
-    Str rangeSpec;              // Pages box text (issue #5694)
-    LONG epoch = 0;
-    ThreadHandle thread = nullptr;
-    // worker-thread only: drive the "<found>... <page>" progress status
-    int nFoundSoFar = 0;
-    DWORD lastProgressMs = 0;
-
-    CountThreadData(MainWindow* win, EngineBase* engine, Str text, bool matchCase, bool matchWholeWord,
-                    bool wantMatchList, bool wantSnippets, int startPage, Str rangeSpec, LONG epoch) {
-        this->win = win;
-        this->engine = engine;
-        this->text = str::Dup(text);
-        this->matchCase = matchCase;
-        this->matchWholeWord = matchWholeWord;
-        this->wantMatchList = wantMatchList;
-        this->wantSnippets = wantSnippets;
-        this->startPage = startPage;
-        this->rangeSpec = str::Dup(rangeSpec);
-        this->epoch = epoch;
-    }
-    ~CountThreadData() {
-        str::Free(text);
-        str::Free(rangeSpec);
-        SafeCloseThreadHandle(&thread);
-    }
-};
-
-struct CountEndTaskData {
-    MainWindow* win = nullptr;
-    CountThreadData* ctd = nullptr;
-    Vec<u64>* positions = nullptr;
-    bool capped = false;               // scan stopped at kMaxFindCount matches
-    Vec<FindMatch>* matches = nullptr; // nullptr unless snippets were requested
-    ~CountEndTaskData() {
-        delete ctd;
-        delete positions;
-        FreeMatchSnippets(matches); // frees any snippets not transferred to win
-        delete matches;
-    }
-};
-
-static void CountEndTask(CountEndTaskData* d) {
-    AutoDelete delData(d);
-    MainWindow* win = d->win;
-    CountThreadData* ctd = d->ctd;
-    if (!IsMainWindowValidAndNotClosing(win)) {
-        return;
-    }
-    if (win->findCountThread != ctd->thread) {
-        return; // superseded (shouldn't happen with the single-worker model)
-    }
-    win->findCountThread = nullptr;
-    if (win->findCountEpoch == ctd->epoch) {
-        // not canceled: install the freshly built cache (steal text from ctd)
-        str::FreePtr(&win->findCountText);
-        win->findCountText = ctd->text;
-        ctd->text = {};
-        win->findCountMatchCase = ctd->matchCase;
-        win->findCountMatchWholeWord = ctd->matchWholeWord;
-        str::ReplaceWithCopy(&win->findCountRangeText, ctd->rangeSpec);
-        win->findCountEngine = ctd->engine;
-        win->findCountPositions = *d->positions;
-        VecSort(win->findCountPositions, CmpMatchKey);
-        win->findCountCapped = d->capped;
-        win->findCountValid = true;
-        if (d->matches) {
-            // install the snippet list (steal ownership of the snippet strings)
-            FindWindowSaveSelectedMatch(win);
-            ClearFindMatches(win);
-            win->findMatches = *d->matches;
-            for (int i = 0; i < len(*d->matches); i++) {
-                (*d->matches)[i].snippet = Str(); // transferred to win->findMatches
-            }
-            VecSort(win->findMatches, CmpFindMatchByPos);
-            win->findCountHasSnippets = ctd->wantSnippets;
-            if (ctd->wantSnippets) {
-                FindWindowRefreshResults(win);
-            }
-        }
-        InvalidateFindMatchPaintCache();
-        ShowMatchCount(win);
-        // Enable/disable Find Next/Prev once we know whether any matches exist.
-        ToolbarUpdateStateForWindow(win, false);
-        ScheduleRepaint(win, 0);
-    }
-    // a newer term arrived while we were scanning: run it now (no worker running)
-    if (win->findCountPendingText) {
-        Str pending = win->findCountPendingText;
-        win->findCountPendingText = {};
-        StartFindCount(win, pending, win->findCountPendingMatchCase, win->findCountPendingMatchWholeWord);
-        str::Free(pending);
-    }
-}
-
-struct CountProgressTaskData {
-    MainWindow* win = nullptr;
-    LONG epoch = 0;
-    int nFound = 0;
-    int pageNo = 0;
-};
-
-static void CountProgressTask(CountProgressTaskData* d) {
-    AutoDelete delData(d);
-    MainWindow* win = d->win;
-    if (!IsMainWindowValidAndNotClosing(win) || win->findCountEpoch != d->epoch) {
-        return;
-    }
-    SetFindCountProgressStatus(win, d->nFound, d->pageNo);
-}
-
-// don't post a status update more often than this while scanning
-constexpr DWORD kFindProgressMs = 100;
-
-static void CountProgress(CountThreadData* d, ProgressUpdateData* data) {
-    if (data->wasCancelled) {
-        *data->wasCancelled = (d->win->findCountEpoch != d->epoch);
-    }
-    // TextSearch reports once per page, which is often enough to show where the
-    // scan is even when a long stretch of pages has no match at all
-    if (data->current <= 0) {
-        return;
-    }
-    DWORD now = GetTickCount();
-    if (d->lastProgressMs != 0 && now - d->lastProgressMs < kFindProgressMs) {
-        return;
-    }
-    d->lastProgressMs = now;
-    auto* pd = new CountProgressTaskData;
-    pd->win = d->win;
-    pd->epoch = d->epoch;
-    pd->nFound = d->nFoundSoFar;
-    pd->pageNo = data->current;
-    uitask::Post(MkFunc0<CountProgressTaskData>(CountProgressTask, pd), "TaskFindCountProgress");
-}
-
-constexpr int kFindResultsBatch = 100;
-constexpr DWORD kFindResultsBatchMs = 500;
-
-struct CountPartialTaskData {
-    MainWindow* win = nullptr;
-    LONG epoch = 0;
-    bool firstBatch = false;
-    int nFoundSoFar = 0;               // running match count (keeps growing past kMaxFindResults)
-    Vec<FindMatch>* matches = nullptr; // owns the snippets until transferred
-    ~CountPartialTaskData() {
-        FreeMatchSnippets(matches);
-        delete matches;
-    }
-};
-
-static void CountPartialTask(CountPartialTaskData* d) {
-    AutoDelete delData(d);
-    MainWindow* win = d->win;
-    if (!IsMainWindowValidAndNotClosing(win)) {
-        return;
-    }
-    if (win->findCountEpoch != d->epoch) {
-        return; // canceled or superseded; drop stale partial results
-    }
-    // running count while the scan is in flight; ShowMatchCount switches this
-    // to "n / m" when the scan finishes. Pass 0 for the page: keep whatever the
-    // progress callback last reported instead of clearing it.
-    SetFindCountProgressStatus(win, d->nFoundSoFar, 0);
-    if (len(*d->matches) > 0) {
-        // the sort below can move rows above the selection (once the scan wraps
-        // around, every new batch belongs at the front), so keep the selection
-        // pinned to its match rather than to its row number
-        FindWindowSaveSelectedMatch(win);
-        if (d->firstBatch) {
-            ClearFindMatches(win);
-        }
-        for (int i = 0; i < len(*d->matches); i++) {
-            VecAppend(win->findMatches, (*d->matches)[i]);
-            (*d->matches)[i].snippet = Str(); // transferred to win->findMatches
-        }
-        VecSort(win->findMatches, CmpFindMatchByPos);
-        win->findCountHasSnippets = true;
-        InvalidateFindMatchPaintCache();
-        FindWindowRefreshResults(win, false /* allowNavigation */);
-        ScheduleRepaint(win, 0);
-    }
-}
-
-static void CountThread(CountThreadData* d) {
-    MainWindow* win = d->win;
-    EngineBase* engine = d->engine;
-
-    auto* positions = new Vec<u64>();
-    Vec<FindMatch>* matches = d->wantMatchList ? new Vec<FindMatch>() : nullptr;
-    int nSent = 0;        // positions already reported via a partial batch
-    int nSentMatches = 0; // matches already streamed to the results list
-    DWORD lastSendMs = 0;
-    bool capped = false; // scan stopped at kMaxFindCount matches
-    {
-        TextSearch ts(engine);
-        ts.SetMatchCase(d->matchCase);
-        ts.SetMatchWholeWord(d->matchWholeWord);
-        Vec<bool> allowed;
-        if (!ParseFindPageRange(d->rangeSpec, engine->PageCount(), allowed)) {
-            VecReset(allowed);
-        }
-        ts.SetAllowedPages(allowed);
-        ts.SetDirection(TextSearch::Direction::Forward);
-        ts.progressCb = MkFunc1<CountThreadData, ProgressUpdateData*>(CountProgress, d);
-        // scan from the current page so results near the reading position come
-        // first; wrap around to cover the rest of the (restricted) range
-        int wrapStart = ts.RestrictFirst();
-        bool wrapped = false;
-        Vec<TextSel>* m = ts.FindFirst(d->startPage, d->text);
-        if (!m && d->startPage > wrapStart) {
-            // Nothing at or after startPage. The wrap-around below only runs
-            // from inside the loop, so without this the loop is never entered
-            // and the scan reports zero matches even though earlier pages have
-            // them -- no "n / m", no highlights, empty results list until the
-            // view moves to a page that has one (issue #5874)
-            wrapped = true;
-            m = ts.FindFirst(wrapStart, d->text);
-        }
-        // check the epoch at the top so a cancel (AbortCount, which joins us on
-        // the UI thread) bails before the expensive snippet build / next scan
-        while (m && win->findCountEpoch == d->epoch) {
-            if (len(*positions) >= kMaxFindCount) {
-                capped = true;
-                break;
-            }
-            VecAppend(*positions, MatchKey(ts.startPage, ts.startGlyph));
-            d->nFoundSoFar = len(*positions); // read by CountProgress
-            if (matches && len(*matches) < kMaxFindResults) {
-                FindMatch fm;
-                fm.startPage = ts.startPage;
-                fm.startGlyph = ts.startGlyph;
-                fm.endPage = ts.endPage;
-                fm.endGlyph = ts.endGlyph;
-                if (d->wantSnippets) {
-                    str::ReplaceWithCopy(&fm.snippet, BuildSnippet(engine, fm));
-                }
-                VecAppend(*matches, fm);
-            }
-            // stream partial results so a slow scan (common word, big doc)
-            // shows results and a running count early; the final full list is
-            // installed by CountEndTask. CountPartialTask re-checks the epoch
-            // on the UI thread, so a stale batch can't clobber a newer search.
-            // batching is driven by the (uncapped) position count so the
-            // running count keeps updating after kMaxFindResults is reached.
-            if (d->wantSnippets) {
-                int n = len(*positions);
-                bool send;
-                if (nSent == 0) {
-                    send = n >= kFindResultsFirstBatch;
-                } else {
-                    send = (n - nSent >= kFindResultsBatch) && (GetTickCount() - lastSendMs >= kFindResultsBatchMs);
-                }
-                if (send) {
-                    auto* pd = new CountPartialTaskData;
-                    pd->win = win;
-                    pd->epoch = d->epoch;
-                    pd->firstBatch = (nSentMatches == 0);
-                    pd->nFoundSoFar = n;
-                    int nMatches = matches ? len(*matches) : 0;
-                    pd->matches = CloneMatchesRange(matches, nSentMatches, nMatches);
-                    nSent = n;
-                    nSentMatches = nMatches;
-                    lastSendMs = GetTickCount();
-                    uitask::Post(MkFunc0<CountPartialTaskData>(CountPartialTask, pd), "TaskFindCountPartial");
-                }
-            }
-            m = ts.FindNext();
-            if (!m && !wrapped && d->startPage > wrapStart) {
-                wrapped = true;
-                m = ts.FindFirst(wrapStart, d->text);
-            }
-            if (wrapped && m && ts.startPage >= d->startPage) {
-                m = nullptr; // came full circle
-            }
-        }
-    }
-    SafeEngineRelease(&engine);
-
-    // wait for StartFindCount to record the thread handle (mirrors FindThread)
-    while (!win->findCountThread) {
-        Sleep(1);
-    }
-
-    auto* data = new CountEndTaskData;
-    data->win = win;
-    data->ctd = d;
-    data->positions = positions;
-    data->capped = capped;
-    data->matches = matches;
-    auto fn = MkFunc0<CountEndTaskData>(CountEndTask, data);
-    uitask::Post(fn, "TaskFindCount");
-    DestroyTempArena();
-}
-
-// cancel any running/pending count and wait for the worker to exit. The find
-// thread and the count thread must never use the engine's text extraction at
-// the same time (mupdf isn't safe for concurrent page access), so a find must
-// not start while a count is running. The wait is bounded: the worker checks
-// the epoch after every match, so it exits within one page's work.
-void AbortCount(MainWindow* win) {
-    AtomicIntInc(&win->findCountEpoch);
-    str::FreePtr(&win->findCountPendingText);
-    ThreadHandle th = win->findCountThread;
-    if (th) {
-        WaitForSingleObject(th, INFINITE);
-        win->findCountThread = nullptr;
-    }
-}
-
-// (re)build the match-position cache on a background thread. Coalesces: if a
-// scan is already running, remember only the latest request and let the running
-// worker start it when it finishes, so rapid typing never piles up scans and
-// the UI thread never blocks waiting on a scan.
-void StartFindCount(MainWindow* win, Str text, bool matchCase, bool matchWholeWord) {
-    DisplayModel* dm = win->AsFixed();
-    if (!dm) {
-        return;
-    }
-    EngineBase* engine = dm->GetEngine();
-    if (!engine) {
-        return;
-    }
-    // CountThread runs on a worker thread and can't touch DisplayModel; do the
-    // layout and the resync (and pageAllowed's sizing below, via
-    // ApplyFindPageRange -> dm->PageCount()) it needs here, before it starts
-    EnsureFullLayout(dm);
-    win->findCountValid = false;
-    // seed the progress status with the page the scan starts from, so it shows a
-    // page right away instead of going blank until the first progress tick;
-    // replaced with "n / m" when the scan finishes
-    gFindCountCurPage = 0;
-    SetFindCountProgressStatus(win, 0, win->ctrl ? win->ctrl->CurrentPageNo() : 0);
-
-    if (win->findCountThread) {
-        // a scan is in flight: cancel it and queue this request; the running
-        // worker's CountEndTask will start it once it exits
-        AtomicIntInc(&win->findCountEpoch);
-        str::FreePtr(&win->findCountPendingText);
-        win->findCountPendingText = str::Dup(text);
-        win->findCountPendingMatchCase = matchCase;
-        win->findCountPendingMatchWholeWord = matchWholeWord;
-        return;
-    }
-
-    engine->AddRef(); // released in CountThread
-    ApplyFindPageRange(win);
-    // always build the match list so PaintAllFindMatches can highlight every hit;
-    // snippets only when the floating results list is showing
-    bool wantSnippets = gSettings->searchUIFloating && IsFindWindowVisible(win);
-    bool wantMatchList = true;
-    int epoch = AtomicIntInc(&win->findCountEpoch);
-    int startPage = win->ctrl ? win->ctrl->CurrentPageNo() : 1;
-    auto* d = new CountThreadData(win, engine, text, matchCase, matchWholeWord, wantMatchList, wantSnippets, startPage,
-                                  win->findPageRangeText, epoch);
-    win->findCountThread = nullptr;
-    auto fn = MkFunc0<CountThreadData>(CountThread, d);
-    win->findCountThread = StartThread(fn, StrL("FindCountThread"));
-    d->thread = win->findCountThread;
-}
-
-// progressCb on the document's TextSearch points at ftd. Drop it before ftd is
-// deleted: a later search on the UI thread (DDE GotoPageWord) calls it.
-static void DropFindProgressCb(MainWindow* win, FindThreadData* ftd) {
-    if (!IsMainWindowValid(win)) {
-        return;
-    }
-    DisplayModel* dm = win->AsFixed();
-    if (!dm || !dm->textSearch) {
-        return;
-    }
-    ProgressUpdateCb& cb = dm->textSearch->progressCb;
-    if ((cb.userData & ~ProgressUpdateCb::kDropsArgBit) != (uintptr_t)ftd) {
-        return;
-    }
-    cb = {};
-}
-
-void FindEndTask(FindEndTaskData* d) {
-    auto* win = d->win;
-    auto* ftd = d->ftd;
-    auto* textSel = d->textSel;
-    auto wasModifiedCanceled = d->wasModifiedCanceled;
-    auto loopedAround = d->loopedAround;
-
-    AutoDelete delData(d);
-    DropFindProgressCb(win, ftd);
-    if (!IsMainWindowValidAndNotClosing(win)) {
-        return;
-    }
-    if (win->findThread != ftd->thread) {
-        // Race condition: FindTextOnThread/AbortFinding was
-        // called after the previous find thread ended but
-        // before this FindEndTask could be executed
-        return;
-    }
-    if (!win->IsDocLoaded()) {
-        // the UI has already been disabled and hidden
-    } else if (textSel) {
-        ShowSearchResult(win, textSel, wasModifiedCanceled);
-        ftd->HideUI(true, loopedAround);
-        UpdateMatchCount(win, ftd->text);
-    } else {
-        // nothing found, or find-as-you-type self-canceled before reaching a
-        // far match. Still kick the full-document count: it does its own
-        // complete scan, so the n/m counter and the results list reflect every
-        // match even when the incremental find gave up. (Runs only now that the
-        // find thread has exited, so the two never scan the engine at once.)
-        ClearSearchResult(win);
-        ftd->HideUI(false, !wasModifiedCanceled);
-        UpdateMatchCount(win, ftd->text);
-    }
-    win->findThread = nullptr;
-}
-
-static void UpdateSearchProgress(FindThreadData* ftd, ProgressUpdateData* data) {
-    if (data->wasCancelled) {
-        bool wasCancelled = ftd->WasCanceled();
-        *data->wasCancelled = wasCancelled;
-        return;
-    }
-    ftd->UpdateProgress(data->current, data->total);
-}
-
-static void FindThread(FindThreadData* ftd) {
-    ReportIf(!(ftd && ftd->win && ftd->win->ctrl && ftd->win->ctrl->AsFixed()));
-
-    MainWindow* win = ftd->win;
-    DisplayModel* dm = win->AsFixed();
-    auto* textSearch = dm->textSearch;
-    auto* ctrl = win->ctrl;
-
-    auto* engine = dm->GetEngine();
-    engine->AddRef();
-    AutoCall releaseEngine(SafeEngineRelease<EngineBase>, &engine);
-
-    Vec<TextSel>* rect;
-    textSearch->progressCb = MkFunc1<FindThreadData, ProgressUpdateData*>(UpdateSearchProgress, ftd);
-    textSearch->SetDirection(ftd->direction);
-    if (ftd->wasModified || !ctrl->ValidPageNo(textSearch->GetCurrentPageNo()) ||
-        !(bool)dm->GetPageInfo(textSearch->GetCurrentPageNo())->visibleRatio) {
-        rect = textSearch->FindFirst(ctrl->CurrentPageNo(), ftd->text);
-    } else {
-        rect = textSearch->FindNext();
-    }
-
-    bool loopedAround = false;
-    if (!win->findCancelled && !rect) {
-        // With no further findings, start over (unless this was a new search from the beginning)
-        int startPage = (TextSearch::Direction::Forward == ftd->direction) ? textSearch->RestrictFirst()
-                                                                           : textSearch->RestrictLast();
-        if (!ftd->wasModified || ctrl->CurrentPageNo() != startPage) {
-            loopedAround = true;
-            rect = textSearch->FindFirst(startPage, ftd->text);
-        }
-    }
-
-    // wait for FindTextOnThread to return so that
-    // FindEndTask closes the correct handle to
-    // the current find thread
-    while (!win->findThread) {
-        Sleep(1);
-    }
-
-    auto* data = new FindEndTaskData;
-    data->win = win;
-    data->ftd = ftd;
-    data->textSel = nullptr;
-    data->loopedAround = false;
-
-    if (!win->findCancelled && rect) {
-        data->textSel = rect;
-        data->wasModifiedCanceled = ftd->wasModified;
-        data->loopedAround = loopedAround;
-    } else {
-        data->wasModifiedCanceled = win->findCancelled;
-    }
-    auto fn = MkFunc0<FindEndTaskData>(FindEndTask, data);
-    uitask::Post(fn, "TaskFindEnd");
-    DestroyTempArena();
-}
 
 // returns true if did abort a thread or hidden the notification
 // cancel a pending debounced find-as-you-type search
@@ -864,81 +284,6 @@ void CancelPendingFind(MainWindow* win) {
     if (win->hwndFrame) {
         KillTimer(win->hwndFrame, kFindDebounceTimerId);
     }
-}
-
-// join the interactive find worker, which drives dm->textSearch. Leaves a
-// counting scan running: that one has its own TextSearch, so only callers that
-// mean to stop searching the document need AbortFinding()
-bool JoinFindThread(MainWindow* win, bool hideMessage) {
-    bool res = false;
-    if (win->findThread) {
-        res = true;
-        logf("JoinFindThread: setting win->findCancelled to true\n");
-        win->findCancelled = true;
-        WaitForSingleObject(win->findThread, INFINITE);
-        win->findThread = nullptr;
-    }
-    win->findCancelled = false;
-
-    if (hideMessage) {
-        bool didRemove = RemoveNotificationsForGroup(win, kNotifFindProgress);
-        if (didRemove) {
-            res = true;
-        }
-    }
-    return res;
-}
-
-// wasModified
-//   if true, starting a search for new term
-//   if false, searching for the next occurrence of previous term
-// Callers may pass wasModified=false incorrectly (e.g. tab switch, DDE). If the
-// term differs from TextSearch::lastText we force wasModified=true. Callers can
-// still pass true for the same text (restart after match-case toggle, etc.).
-void FindTextOnThread(MainWindow* win, TextSearch::Direction direction, Str text, bool wasModified, bool showProgress) {
-    if (!win) {
-        return;
-    }
-    AbortFinding(win, false);
-    if (len(text) == 0) {
-        return;
-    }
-    DisplayModel* dm = win->AsFixed();
-    if (!dm || !dm->textSearch) {
-        return;
-    }
-    // FindThread runs on a worker thread and can't touch DisplayModel; do
-    // the layout and the resync it needs here, before it starts
-    EnsureFullLayout(dm);
-    RememberFindQuery(text);
-    if (ApplyFindPageRange(win)) {
-        wasModified = true;
-    }
-    // Match SetText()'s normalization: strip one leading space (word-start)
-    // so trailing/whole-word spaces still compare correctly.
-    Str searchText = text;
-    if (searchText && searchText.s[0] == ' ') {
-        searchText = Str(searchText.s + 1, searchText.len - 1);
-    }
-    if (!str::Eq(searchText, dm->textSearch->lastText)) {
-        wasModified = true;
-    }
-    // closing the find UI dropped the search position: start over from the
-    // current page instead of continuing from nowhere
-    if (len(dm->textSearch->pageText) == 0) {
-        wasModified = true;
-    }
-    // a new/changed term starts a search if the find UI didn't (e.g. F3 after
-    // a tab switch); Find Next/Prev for the same term doesn't
-    if (wasModified) {
-        MarkSearchStart(win);
-    }
-    FindThreadData* ftd = new FindThreadData(win, direction, text, wasModified);
-    ftd->ShowUI(showProgress);
-    win->findThread = nullptr;
-    auto fn = MkFunc0(FindThread, ftd);
-    win->findThread = StartThread(fn, StrL("FindThread"));
-    ftd->thread = win->findThread; // safe because only accesssed on ui thread
 }
 
 // TODO: for https://github.com/sumatrapdfreader/sumatrapdf/issues/2655

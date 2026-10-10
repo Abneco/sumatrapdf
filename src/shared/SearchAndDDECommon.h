@@ -113,3 +113,28 @@ bool ApplyFindPageRange(MainWindow* win);
 void StartFindCount(MainWindow* win, Str text, bool matchCase, bool matchWholeWord);
 
 Str HandleSyncCmd(Str cmd, bool* ack);
+
+// implemented by each app
+struct UpdateFindStatusData;
+void UpdateFindStatus(UpdateFindStatusData* d);
+void FindTaskCloseThread(ThreadHandle* h);
+void FindWinCloseThread(ThreadHandle* h);
+void FindJoinThread(ThreadHandle* h);
+void FindSetToolbarBusy(MainWindow* win, bool busy);
+void FindWindowDocChanged(MainWindow* win);
+void FindResultsInstalled(MainWindow* win, bool gotSnippets);
+void FindCountShown(MainWindow* win);
+void FindStatusChanged(MainWindow* win);
+
+struct UpdateFindStatusData {
+    MainWindow* win;
+    int current;
+    int total;
+    bool showProgress;
+    // page the incremental find is on. Written on the UI thread.
+    int* firstPage = nullptr;
+};
+struct CountThreadData;
+struct FindThreadData;
+void CountThread(CountThreadData* d);
+void FindThread(FindThreadData* ftd);
